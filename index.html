@@ -115,6 +115,15 @@ input{user-select:text;-webkit-user-select:text}
 .unit.ultReady .fig{border-color:#ffd100;box-shadow:0 0 16px #ffd100,0 0 30px rgba(255,209,0,.5);animation:pulse .7s infinite alternate}
 @keyframes pulse{from{transform:scale(1)}to{transform:scale(1.07)}}
 .unit.stunned .fig::after{content:'💫';position:absolute;top:0;right:0;font-size:15px}
+.unit.hitFx .fig{filter:brightness(1.8) saturate(.3)}
+#ultFlash{position:absolute;inset:0;background:radial-gradient(circle,#fff8d0 0%,rgba(255,209,0,.25) 55%,transparent 80%);opacity:0;pointer-events:none;z-index:5}
+@keyframes ultFlashA{0%{opacity:.55}100%{opacity:0}}
+.hpbar.low i{background:linear-gradient(90deg,#ff5a4e,#ff9a3d);animation:lowPulse .7s infinite alternate}
+@keyframes lowPulse{from{filter:brightness(.8)}to{filter:brightness(1.4)}}
+.chestRow{display:flex;gap:7px;margin-top:9px}
+.chestBtn{flex:1;padding:7px 2px;border-radius:9px;border:1.5px solid #57468a;background:#241a45;color:#d9d2f2;font-size:11.5px;font-weight:800;cursor:pointer;text-align:center;font-family:inherit}
+.chestBtn.ready{border-color:#ffd100;background:linear-gradient(180deg,#8a6a10,#5e4a08);color:#ffe9a8;animation:glowPulse 1.2s infinite}
+.chestBtn.got{opacity:.45;cursor:default;animation:none}
 .unit .shieldTag{position:absolute;top:-5px;right:0;font-size:12px;z-index:2}
 .dmgFloat{position:absolute;font-weight:900;font-size:16px;color:#fff;text-shadow:0 0 4px #000,0 2px 2px #000;transform:translate(-50%,-50%);pointer-events:none;z-index:9;white-space:nowrap;animation:floatUp .85s ease-out forwards}
 .dmgFloat.crit{font-size:21px;color:#ffd100}
@@ -199,7 +208,7 @@ input{user-select:text;-webkit-user-select:text}
 <div id="battleScr">
  <div id="btTop"><span class="ttl" id="btTitle">战斗</span><span class="dim" id="btWave"></span>
   <div class="spd"><button id="btAuto" class="on">自动大招</button><button id="btSpd">×1</button><button id="btSkip">跳过</button></div></div>
- <div id="btStage"><div id="btGround"></div><div id="waveTag"></div>
+ <div id="btStage"><div id="btGround"></div><div id="ultFlash"></div><div id="waveTag"></div>
   <div id="ultBanner"><div class="in"><canvas id="ultCv" width="184" height="184"></canvas><div><div class="sk" id="ultSkill"></div><div class="who" id="ultWho"></div></div></div></div>
  </div>
  <div id="btLog"></div>
@@ -435,14 +444,14 @@ let S=null;
 function newSave(){
  return {gold:6000,gems:1200,stam:120,stamTs:Date.now(),accLvl:1,accXp:0,name:'团长'+irnd(10,99),
   heroes:{adai:{lvl:1,xp:0,star:1,shards:0,eq:{}},bingbing:{lvl:1,xp:0,star:1,shards:0,eq:{}},mantou:{lvl:1,xp:0,star:1,shards:0,eq:{}}},
-  team:['adai','mantou','bingbing',null,null],
-  stages:{},elite:{},items:[],potions:{s:3,m:1},
+  team:['adai',null,'mantou','bingbing',null],
+  stages:{},elite:{},items:[],potions:{s:3,m:1},shardBank:{},chests:{},
   arena:{pts:1000,wins:0,day:'',dayWins:0},summon:{pity:0,total:0,goldTotal:0},
   daily:{date:todayStr(),prog:{},claimed:[]},achClaimed:[],signin:{last:'',count:0},
   guide:{summoned:false,battled:false},uidSeq:1};
 }
 function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
-function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}}
+function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};}
 function accXpNeed(l){return Math.round(60*Math.pow(l,1.5));}
 function stamMax(){return 120+S.accLvl*2;}
 function tickStamina(){const now=Date.now();const gain=Math.floor((now-S.stamTs)/45000);
@@ -489,6 +498,8 @@ const ACHS=[
  {key:'a_summon20',t:'召唤大师',d:'累计召唤 20 次',test:()=>S.summon.total>=20,rew:{gem:150}}];
 const SIGNIN_REW=[{gem:60},{gold:800},{stam:60},{gem:100},{gold:1500},{item:'w4'},{gem:280}];
 function rewText(r){const p=[];if(r.gold)p.push('🪙 '+r.gold);if(r.gem)p.push('💎 '+r.gem);if(r.stam)p.push('⚡ '+r.stam);if(r.item)p.push('🎁 '+EQUIPS[r.item].name);return p.join(' · ');}
+function addShards(hid,n){if(S.heroes[hid])S.heroes[hid].shards+=n;else S.shardBank[hid]=(S.shardBank[hid]||0)+n;}
+function synthHero(id){if((S.shardBank[id]||0)<20)return;S.shardBank[id]-=20;S.heroes[id]={lvl:1,xp:0,star:1,shards:0,eq:{}};SFX.summon();toast('🎉 合成英雄：'+HERO_MAP[id].name);saveGame();closeModal();renderHeroes();updateBadges();}
 function grantRew(r,silent){if(r.gold)S.gold+=r.gold;if(r.gem)S.gems+=r.gem;if(r.stam)S.stam+=r.stam;
  if(r.item){S.items.push({uid:S.uidSeq++,itemId:r.item});}
  if(!silent)toast('获得奖励：'+rewText(r));renderTop();saveGame();}
@@ -504,7 +515,7 @@ function renderTop(){
 function updateBadges(){
  const set=(id,on)=>{const e=$(id);if(e)e.style.display=on?'block':'none';};
  set('bdgMore',DAILIES.some(d=>(S.daily.prog[d.key]||0)>=d.need&&!S.daily.claimed.includes(d.key))||ACHS.some(a=>!S.achClaimed.includes(a.key)&&a.test())||S.signin.last!==todayStr());
- set('bdgHero',Object.keys(S.heroes).some(id=>{const h=S.heroes[id];return h.star<5&&h.shards>=(STAR_COST[h.star+1]||9999);})||S.potions.s>0);
+ set('bdgHero',Object.keys(S.heroes).some(id=>{const h=S.heroes[id];return h.star<5&&h.shards>=(STAR_COST[h.star+1]||9999);})||S.potions.s>0||Object.values(S.shardBank).some(n=>n>=20));
  set('bdgSummon',S.gems>=280);
  set('bdgArena',S.arena.day!==todayStr());
 }
@@ -533,6 +544,10 @@ function stageUnlocked(c,s,elite){
  return !!map[prev];
 }
 function chapterStars(c,elite){let t=0;for(let s=0;s<8;s++)t+=(elite?S.elite:S.stages)[stageKey(c,s)]||0;return t;}
+const CHESTS=[{stars:8,rew:{gold:2000},label:'🪙 2000'},{stars:16,rew:{gem:150},label:'💎 150'},{stars:24,rew:{gem:400},label:'💎 400'}];
+function claimChest(c,elite,i){const key=(elite?'e':'n')+c+'-'+CHESTS[i].stars;if(S.chests[key])return;if(chapterStars(c,elite)<CHESTS[i].stars)return;S.chests[key]=1;grantRew(CHESTS[i].rew);SFX.win();saveGame();renderHome();}
+function foePower(eid,lvl){const E=ENEMIES[eid];const grow=1+(lvl-1)*0.125;const boss=E.role==='boss'?1.25:1;const hp=E.base.hp*grow*boss,atk=E.base.atk*grow*(E.role==='boss'?1.15:1),def=E.base.def*grow;return Math.round(hp*0.32+atk*7.5+def*5.5);}
+function stageRecPower(c,s,elite){const st=CHAPTERS[c].stages[s];let p=0;st.waves.forEach(w=>w.forEach(x=>p+=foePower(x[0],x[1])));return Math.round(p*(elite?1.35:1));}
 function renderHome(){
  const el=$('scr-home');let html='<div class="card" style="margin-bottom:12px;padding:10px 12px"><div style="display:flex;align-items:center;gap:9px"><div style="font-size:21px">⚔️</div><div class="grow" style="flex:1"><div style="font-weight:900;font-size:14.5px">当前阵容战力 <span class="gold">'+fmtN(teamPower())+'</span></div><div class="dim" style="font-size:11.5px">在「英雄」页点击阵容槽位可以调整上阵英雄</div></div><button class="btn sm blue" onclick="goScr(\'heroes\')">调阵容</button></div></div>';
  html+='<div class="modeTabs"><button class="'+(homeMode==='normal'?'on':'')+'" onclick="homeMode=\'normal\';renderHome()">普通副本</button><button class="'+(homeMode==='elite'?'on':'')+'" onclick="homeMode=\'elite\';renderHome()">精英副本 · 英雄碎片</button></div>';
@@ -544,6 +559,9 @@ function renderHome(){
    html+='<div class="stageBtn '+(st.boss?'boss':'')+(elite?' elite':'')+(un?'':' locked')+'" onclick="openStage('+c+','+s+','+elite+')"><span class="n">'+(un?(s+1):'🔒')+'</span><span class="nm">'+st.n+'</span>'+(stars?'<span class="st">'+'★'.repeat(stars)+'</span>':'')+'</div>';
   });
   html+='</div>';
+  const cStars=chapterStars(c,elite);
+  html+='<div class="chestRow">'+CHESTS.map((ch2,i)=>{const key=(elite?'e':'n')+c+'-'+ch2.stars;const got=S.chests[key];const ready=!got&&cStars>=ch2.stars;
+   return '<button class="chestBtn '+(got?'got':ready?'ready':'')+'" '+(ready?'onclick="claimChest('+c+','+elite+','+i+')"':'')+'>🎁 '+ch2.stars+'★ · '+ch2.label+(got?'<br>已领取':ready?'<br>点击领取':'<br>'+cStars+'/'+ch2.stars)+'</button>';}).join('')+'</div>';
   if(elite)html+='<div class="dim" style="font-size:11px;margin-top:5px">精英副本掉落对应关卡的英雄碎片：'+ch.stages.map((st,s)=>{const hid=ELITE_SHARDS[stageKey(c,s)];return hid?st.n+'→'+HERO_MAP[hid].name.split('·')[0]:'';}).filter(Boolean).join('、')+'</div>';
  });
  el.innerHTML=html;
@@ -555,8 +573,10 @@ function openStage(c,s,elite){
  const stars=(elite?S.elite:S.stages)[k]||0;const cost=stageCost(c,s,elite);
  const foes=st.waves[0].map(w=>ENEMIES[w[0]].name+' Lv.'+w[1]).join('、');
  const shardId=elite?ELITE_SHARDS[k]:null;
+ const rec=stageRecPower(c,s,elite);const tp=teamPower();const ratio=tp/rec;
+ const recHtml='<br>推荐战力：<b class="'+(ratio>=1?'grn':ratio>=0.8?'gold':'')+'" style="'+(ratio<0.8?'color:#ff8a7a':'')+'">'+rec+'</b> · 你的阵容战力：<b>'+tp+'</b>'+(ratio>=1?' <span class="grn">（稳过）</span>':ratio>=0.8?' <span class="gold">（可以一试）</span>':' <span style="color:#ff8a7a">（建议先强化）</span>');
  openModal('<h3>'+(elite?'精英·':'')+CHAPTERS[c].name+' '+(s+1)+' · '+st.n+' <span class="x" onclick="closeModal()">✕</span></h3>'
- +'<p style="font-size:13px;line-height:1.75">敌方阵容：'+foes+(st.waves.length>1?'（共 '+st.waves.length+' 波）':'')+'<br>消耗体力：⚡'+cost+'<br>奖励：🪙 '+st.rew.gold+' · 经验 '+st.rew.xp+(st.rew.gem?' · 💎 '+st.rew.gem:'')+(shardId?'<br>掉落碎片：<span class="pur">'+HERO_MAP[shardId].name+' 碎片</span>':'')+(stars>=3?'<br><span class="grn">已三星通关，可使用扫荡</span>':'')+'</p>'
+ +'<p style="font-size:13px;line-height:1.75">敌方阵容：'+foes+(st.waves.length>1?'（共 '+st.waves.length+' 波）':'')+recHtml+'<br>消耗体力：⚡'+cost+'<br>奖励：🪙 '+st.rew.gold+' · 经验 '+st.rew.xp+(st.rew.gem?' · 💎 '+st.rew.gem:'')+(shardId?'<br>掉落碎片：<span class="pur">'+HERO_MAP[shardId].name+' 碎片</span>':'')+(stars>=3?'<br><span class="grn">已三星通关，可使用扫荡</span>':'')+'</p>'
  +'<div class="kvBtns"><button class="btn blue" onclick="closeModal();goScr(\'heroes\')">调整阵容</button>'
  +(stars>=3?'<button class="btn purple" onclick="doSweep('+c+','+s+','+elite+',1)">扫荡 ×1</button><button class="btn purple" onclick="doSweep('+c+','+s+','+elite+',5)">扫荡 ×5</button>':'')
  +'<button class="btn" onclick="startStageBattle('+c+','+s+','+elite+')">开始战斗</button></div>');
@@ -569,7 +589,7 @@ function grantStageRewards(c,s,elite,stars){
  const drops=[];
  if(Math.random()<0.55){const p=Math.random()<0.7?'s':'m';S.potions[p]++;drops.push(p==='s'?'经验药水（小）':'经验药水（大）');}
  if(Math.random()<(elite?0.4:0.22)){const eid=pick(EQUIP_DROPS);S.items.push({uid:S.uidSeq++,itemId:eid});drops.push('装备：'+EQUIPS[eid].name);}
- if(elite){const hid=ELITE_SHARDS[k];if(hid){if(!S.heroes[hid]){S.heroes[hid]={lvl:1,xp:0,star:1,shards:0,eq:{}};}S.heroes[hid].shards+=irnd(1,2);drops.push(HERO_MAP[hid].name+' 碎片');}}
+ if(elite){const hid=ELITE_SHARDS[k];if(hid){addShards(hid,irnd(1,2));drops.push(HERO_MAP[hid].name+' 碎片');}}
  if(first&&st.rew.gem){S.gems+=st.rew.gem;drops.push('首通 💎 '+st.rew.gem);}
  return {gold,xp:st.rew.xp,drops};
 }
@@ -600,7 +620,7 @@ function renderHeroes(){
  sorted.forEach(H=>{
   if(heroFilter!=='all'&&H.role!==heroFilter)return;
   const h=S.heroes[H.id];const owned=!!h;
-  html+='<div class="hcard r'+H.rarity+(owned?'':' notOwned')+'" onclick="openHero(\''+H.id+'\')">'+(owned&&S.team.includes(H.id)?'<span class="inTeam">出战</span>':'')+'<canvas width="160" height="160" data-hero="'+H.id+'"></canvas><div class="nm">'+H.name+'</div><div class="meta"><span>'+(owned?'Lv.'+h.lvl:'未获得')+'</span><span class="stars">'+(owned?'★'.repeat(h.star):'')+'</span></div>'+(owned&&h.star<5?'<div class="shardTag">碎片 '+h.shards+'/'+STAR_COST[h.star+1]+'</div>':'')+'</div>';
+  html+='<div class="hcard r'+H.rarity+(owned?'':' notOwned')+'" onclick="openHero(\''+H.id+'\')">'+(owned&&S.team.includes(H.id)?'<span class="inTeam">出战</span>':'')+'<canvas width="160" height="160" data-hero="'+H.id+'"></canvas><div class="nm">'+H.name+'</div><div class="meta"><span>'+(owned?'Lv.'+h.lvl:'未获得')+'</span><span class="stars">'+(owned?'★'.repeat(h.star):'')+'</span></div>'+(owned&&h.star<5?'<div class="shardTag">碎片 '+h.shards+'/'+STAR_COST[h.star+1]+'</div>':(!owned&&(S.shardBank[H.id]||0)>0?'<div class="shardTag">碎片 '+S.shardBank[H.id]+'/20'+(S.shardBank[H.id]>=20?' 可合成！':'')+'</div>':''))+'</div>';
  });
  html+='</div>';
  html+='<div class="card" style="margin-top:12px"><div style="font-weight:900;margin-bottom:5px">🎒 道具背包</div><div style="font-size:13px;line-height:1.9">🧪 经验药水（小）×'+S.potions.s+'（+120 经验） · ⚗️ 经验药水（大）×'+S.potions.m+'（+500 经验）<br><span class="dim">在英雄详情页使用。装备 '+S.items.length+' 件，在英雄详情页穿戴，多余装备可出售。</span></div></div>';
@@ -617,7 +637,7 @@ function openHero(id){
  if(pickingSlot>=0&&h){const slot=pickingSlot;pickingSlot=-1;
   const oldIdx=S.team.indexOf(id);if(oldIdx>=0)S.team[oldIdx]=null;
   S.team[slot]=id;SFX.quest();toast(H.name+' 上阵！');saveGame();renderHeroes();return;}
- if(!h){openModal('<h3>'+H.name+' <span class="x" onclick="closeModal()">✕</span></h3><div style="text-align:center"><canvas width="180" height="180" id="mhCv" style="border-radius:12px"></canvas></div><p style="line-height:1.8;font-size:13.5px;margin-top:8px"><span style="color:'+RAR_COLOR[H.rarity]+';font-weight:800">'+RAR_NAME[H.rarity]+'</span> · '+H.cls+' · '+(H.row==='front'?'前排':'后排')+'<br>「'+H.quote+'」<br>大招【'+H.ult.name+'】'+H.ult.desc+'<br>被动【'+H.passive.name+'】'+H.passive.desc+'（3 星解锁）<br><span class="dim">获取方式：召唤，或在精英副本收集碎片（20 碎片合成）</span></p>'+(h?'':'<div class="kvBtns"><button class="btn purple" onclick="closeModal();goScr(\'summon\')">去召唤</button></div>'));
+ if(!h){openModal('<h3>'+H.name+' <span class="x" onclick="closeModal()">✕</span></h3><div style="text-align:center"><canvas width="180" height="180" id="mhCv" style="border-radius:12px"></canvas></div><p style="line-height:1.8;font-size:13.5px;margin-top:8px"><span style="color:'+RAR_COLOR[H.rarity]+';font-weight:800">'+RAR_NAME[H.rarity]+'</span> · '+H.cls+' · '+(H.row==='front'?'前排':'后排')+'<br>「'+H.quote+'」<br>大招【'+H.ult.name+'】'+H.ult.desc+'<br>被动【'+H.passive.name+'】'+H.passive.desc+'（3 星解锁）<br><span class="dim">获取方式：召唤，或在精英副本收集碎片（20 碎片合成）</span><br>已收集碎片：<b class="gold">'+(S.shardBank[id]||0)+' / 20</b></p><div class="kvBtns">'+((S.shardBank[id]||0)>=20?'<button class="btn green" onclick="synthHero(\''+id+'\')">✨ 碎片合成英雄</button>':'')+'<button class="btn purple" onclick="closeModal();goScr(\'summon\')">去召唤</button></div>');
   drawChibi($('mhCv'),H);return;}
  const st=heroStats(id);const inTeam=S.team.includes(id);
  let eqHtml='<div class="eqSlots">'+['weapon','armor','trinket'].map(slot=>{const uid=h.eq[slot];const it=uid?S.items.find(i=>i.uid===uid):null;
@@ -677,7 +697,7 @@ function doSummon(type,n){
   let rar=rollRarity(gem);
   if(gem&&S.summon.pity>=10&&rar<3)rar=3;
   if(gem&&rar>=3){S.summon.pity=0;gotPurplePlus=true;}
-  if(rar===0){const h=pick(HEROES);if(!S.heroes[h.id])S.heroes[h.id]={lvl:1,xp:0,star:1,shards:0,eq:{}};S.heroes[h.id].shards+=5;results.push({junk:'shard',hero:h.id,rar:2});continue;}
+  if(rar===0){const h=pick(HEROES);addShards(h.id,5);results.push({junk:'shard',hero:h.id,rar:2});continue;}
   const pool=HEROES.filter(h=>h.rarity===rar);const H=pick(pool);
   if(S.heroes[H.id]){const sh=rar===2?10:rar===3?30:80;S.heroes[H.id].shards+=sh;results.push({hero:H.id,rar,dup:sh});}
   else{S.heroes[H.id]={lvl:1,xp:0,star:1,shards:0,eq:{}};results.push({hero:H.id,rar,isNew:true});}
@@ -748,6 +768,7 @@ function unitEl(u){
 function refreshUnit(u){
  if(!u.el)return;const hpI=u.el.querySelector('.hpbar i'),enI=u.el.querySelector('.enbar i');
  hpI.style.width=clamp(u.hp/u.maxhp*100,0,100)+'%';enI.style.width=clamp(u.energy,0,100)+'%';
+ u.el.querySelector('.hpbar').classList.toggle('low',u.alive&&u.hp/u.maxhp<0.3);
  u.el.classList.toggle('dead',!u.alive);
  u.el.classList.toggle('ultReady',u.alive&&u.energy>=100&&u.side==='ally');
  u.el.classList.toggle('stunned',u.stun>0);
@@ -755,7 +776,7 @@ function refreshUnit(u){
 }
 function btLogFn(msg){const l=$('btLog');const d=document.createElement('div');d.textContent=msg;l.appendChild(d);while(l.children.length>4)l.removeChild(l.firstChild);}
 function stagePos(u){const pos=(u.side==='ally'?ALLY_POS:FOE_POS)[u.slot];const st=$('btStage');return {x:pos.x/100*st.clientWidth,y:pos.y/100*st.clientHeight+16};}
-function floatDmg(u,txt,cls){if(B.fast)return;const p=stagePos(u);const d=document.createElement('div');d.className='dmgFloat '+(cls||'');d.textContent=txt;
+function floatDmg(u,txt,cls){if(B.fast)return;const stg=$('btStage');if(stg.querySelectorAll('.dmgFloat').length>22&&cls!=='crit')return;const p=stagePos(u);const d=document.createElement('div');d.className='dmgFloat '+(cls||'');d.textContent=txt;
  d.style.left=p.x+'px';d.style.top=p.y+'px';$('btStage').appendChild(d);setTimeout(()=>d.remove(),880);}
 function fxSlash(u){if(B.fast)return;const p=stagePos(u);const d=document.createElement('div');d.className='slashFx';d.style.left=(p.x-26)+'px';d.style.top=(p.y-20)+'px';$('btStage').appendChild(d);setTimeout(()=>d.remove(),240);}
 function fxProj(from,to,color){if(B.fast)return;const a=stagePos(from),b=stagePos(to);const d=document.createElement('div');d.className='proj';
@@ -788,6 +809,7 @@ function dealDmg(src,tgt,mult,opt){
  if(dmg>0){tgt.energy=clamp(tgt.energy+11,0,100);floatDmg(tgt,(crit?'暴击 ':'')+'-'+dmg,crit?'crit':'hurt');}
  else floatDmg(tgt,'护盾吸收','miss');
  fxSlash(tgt);
+ if(!B.fast&&tgt.el){tgt.el.classList.add('hitFx');setTimeout(()=>{if(tgt.el)tgt.el.classList.remove('hitFx');},110);}
  if(src.isHero&&src.star>=3&&src.def.passive){
   if(src.def.passive.key==='lifesteal'&&dmg>0)doHeal(src,src,Math.round(dmg*0.12),true);
   if(src.def.passive.key==='poison'&&!opt.dot)tgt.dots.push({t:3,tick:0,amt:Math.round(src.atk*0.25),src});
@@ -832,6 +854,7 @@ function castUlt(u){
  if(!u.alive||u.energy<100)return;const ult=u.def.ult;if(!ult)return;
  u.energy=0;refreshUnit(u);SFX.ult();
  if(!B.fast){const bn=$('ultBanner');$('ultSkill').textContent=ult.name;$('ultWho').textContent=u.name+' 释放大招';
+  const fl=$('ultFlash');if(fl){fl.style.animation='none';void fl.offsetWidth;fl.style.animation='ultFlashA .45s ease-out';}
   const cv=$('ultCv');if(u.isHero)drawChibi(cv,u.def);else drawMonster(cv,u.def.art);
   bn.style.display='flex';setTimeout(()=>bn.style.display='none',820/B.speed);}
  btLogFn('✦ '+u.name+' 释放【'+ult.name+'】');
@@ -957,13 +980,19 @@ function startStageBattle(c,s,elite){
 const ARENA_NAMES=['龙傲天','一刀999','奶香一刀','路过的勇者','月亮邮差','蒜头王八','快乐源泉','隔壁老王','无敌旋风腿','佛系玩家','肝帝本帝','土豆侠'];
 let arenaOpps=[];
 function genArenaOpps(){
- arenaOpps=[];const myLvl=Math.max(1,Math.round(S.team.filter(Boolean).reduce((s,id)=>s+S.heroes[id].lvl,0)/Math.max(1,S.team.filter(Boolean).length)));
+ arenaOpps=[];const myTeam=S.team.filter(Boolean);const myLvl=Math.max(1,Math.round(myTeam.reduce((s,id)=>s+S.heroes[id].lvl,0)/Math.max(1,myTeam.length)));
+ const myPower=teamPower();
  for(let i=0;i<4;i++){
-  const pool=[...HEROES].sort(()=>Math.random()-0.5).slice(0,5);
-  const lvl=clamp(myLvl+irnd(-2,3),1,30);const star=clamp(1+Math.floor(lvl/9)+irnd(0,1),1,4);
-  const power=pool.reduce((s,H)=>{const grow=1+(lvl-1)*0.115,sm=STAR_MULT[star];return s+Math.round(H.base.hp*grow*sm*0.32+H.base.atk*grow*sm*7.5+H.base.def*grow*sm*5.5);},0);
-  arenaOpps.push({name:pick(ARENA_NAMES)+' Lv.'+lvl,team:pool.map(H=>H.id),lvl,star,power,pts:S.arena.pts+irnd(-120,160)});
+  const size=clamp(myTeam.length+irnd(-1,1),3,5);
+  const sorted=[...HEROES].sort((a,b)=>(a.role==='tank'?0:1)-(b.role==='tank'?0:1));
+  const tanks=sorted.filter(h=>h.role==='tank').sort(()=>Math.random()-0.5);
+  const rest=sorted.filter(h=>h.role!=='tank').sort(()=>Math.random()-0.5);
+  const pool=[...tanks.slice(0,size>=4?2:1),...rest].slice(0,size);
+  const lvl=clamp(myLvl+irnd(-2,2),1,30);const star=clamp(1+Math.floor(lvl/9)+irnd(0,1),1,4);
+  const rawPower=pool.reduce((s,H)=>{const grow=1+(lvl-1)*0.115,sm=STAR_MULT[star];return s+Math.round(H.base.hp*grow*sm*0.32+H.base.atk*grow*sm*7.5+H.base.def*grow*sm*5.5);},0);
+  arenaOpps.push({name:pick(ARENA_NAMES)+' Lv.'+lvl,team:pool.map(H=>H.id),lvl,star,power:rawPower,pts:S.arena.pts+irnd(-120,160)});
  }
+ arenaOpps.sort((a,b)=>a.power-b.power);
 }
 function renderArena(){
  if(!arenaOpps.length)genArenaOpps();
