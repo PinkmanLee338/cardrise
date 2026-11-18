@@ -124,6 +124,33 @@ input{user-select:text;-webkit-user-select:text}
 #btTop .spd{margin-left:auto;display:flex;gap:6px}
 #btTop .spd button{background:rgba(255,255,255,.12);border:1px solid #57468a;color:#dfe6ff;border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700}
 #btTop .spd button.on{background:#f08c0a;color:#fff;border-color:#ffe1a0}
+#btTop .plate{font-weight:900;font-size:13px;color:#fff;padding:5px 12px;border-radius:9px;text-shadow:0 1px 2px rgba(0,0,0,.5);white-space:nowrap}
+#btTop .plate.blue{background:linear-gradient(180deg,#3a6ad8,#274b9e);border:1.5px solid #7ea4ff}
+#btTop .plate.red{background:linear-gradient(180deg,#c8452c,#93301e);border:1.5px solid #ff9a7a}
+#btTop .plate .dim{color:#ffd9c9;font-size:10.5px;font-weight:700;margin-left:5px}
+#btTimer{margin:0 auto;font-weight:900;font-size:15px;color:#ffe9a8;background:rgba(0,0,0,.55);border:2px solid #8a7648;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;flex:none}
+#btTimer.hot{color:#ff8a7a;border-color:#c8452c}
+#btStack{position:absolute;right:8px;top:35%;z-index:8;display:flex;flex-direction:column;gap:9px}
+#btStack .stk{width:46px;height:46px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(20,14,40,.72);color:#fff;font-size:12.5px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0}
+#btStack .stk.on{border-color:#ffd100;color:#ffd100;box-shadow:0 0 12px rgba(255,209,0,.55)}
+#btStack .stk:active{transform:scale(.93)}
+#btCards{display:flex;gap:7px;justify-content:center;padding:7px 8px 4px;background:rgba(0,0,0,.4);z-index:5}
+.btc{position:relative;width:19%;max-width:78px;border-radius:24px 24px 9px 9px;border:2.5px solid #b03a2e;background:linear-gradient(180deg,#3a2c50,#241a38);overflow:hidden;flex:none}
+.btc.r1{border-color:#5aa2e8}.btc.r2{border-color:#b06ee8}.btc.r3{border-color:#f08c0a}
+.btc canvas{width:100%;display:block}
+.btc .stars{font-size:9px;color:#ffd100;text-align:center;line-height:1.3;text-shadow:0 1px 2px #000}
+.btc .bhp,.btc .ben{height:5px;background:rgba(0,0,0,.7);margin:1.5px 4px;border-radius:3px;overflow:hidden}
+.btc .bhp i{display:block;height:100%;background:linear-gradient(90deg,#58d93c,#8aff6a)}
+.btc .ben i{display:block;height:100%;background:linear-gradient(90deg,#ffb62e,#ffd100)}
+.btc .bhp{margin-bottom:4px}
+.btc.ready{border-color:#ffd100;box-shadow:0 0 14px rgba(255,209,0,.85);animation:pulse .7s infinite alternate}
+.btc.dead{filter:grayscale(1);opacity:.45}
+.btc .bult{position:absolute;top:3px;left:0;right:0;text-align:center;font-size:9px;font-weight:900;color:#ffe9a8;text-shadow:0 1px 3px #000,0 0 6px #000;opacity:0}
+.btc.ready .bult{opacity:1}
+#btStage.shake{animation:shk .32s}
+@keyframes shk{0%,100%{transform:none}25%{transform:translate(3px,-2px)}55%{transform:translate(-3px,2px)}80%{transform:translate(2px,1px)}}
+#battleScr #ultBanner canvas{width:116px;height:116px}
+#battleScr #ultBanner .sk{font-size:33px;transform:rotate(-2deg)}
 #btStage{flex:1;position:relative;overflow:hidden;background:linear-gradient(180deg,#2c4a72 0%,#3a5f7a 34%,#4a7a4e 62%,#33512f 100%)}
 #btStage.grave{background:linear-gradient(180deg,#1c1c34 0%,#2c2c4a 34%,#3d3d55 62%,#2a2a3c 100%)}
 #btStage.cave{background:linear-gradient(180deg,#200f14 0%,#38181e 34%,#4a2620 62%,#2c1811 100%)}
@@ -266,11 +293,12 @@ input{user-select:text;-webkit-user-select:text}
 </div>
 
 <div id="battleScr">
- <div id="btTop"><span class="ttl" id="btTitle">战斗</span><span class="dim" id="btWave"></span>
-  <div class="spd"><button id="btAuto" class="on">自动大招</button><button id="btSpd">×1</button><button id="btSkip">跳过</button></div></div>
+ <div id="btTop"><div class="plate blue">⚔️ 团长 Lv.<span id="btMeLv">1</span></div><div id="btTimer">00:00</div><div class="plate red"><span id="btTitle">战斗</span><span class="dim" id="btWave"></span></div></div>
  <div id="btStage"><div id="btGround"></div><div id="ultFlash"></div><div id="waveTag"></div>
   <div id="ultBanner"><div class="in"><canvas id="ultCv" width="184" height="184"></canvas><div><div class="sk" id="ultSkill"></div><div class="who" id="ultWho"></div></div></div></div>
  </div>
+ <div id="btStack"><button id="btPause" class="stk">⏸</button><button id="btAuto" class="stk on">自动</button><button id="btSpd" class="stk">×1</button><button id="btSkip" class="stk">⏩</button></div>
+ <div id="btCards"></div>
  <div id="btLog"></div>
  <div id="btBtns"><button class="btn gray" id="btFlee">🏳️ 撤退</button><button class="btn blue" id="btAgain" style="display:none">再来一场</button><button class="btn" id="btDone" style="display:none">领取奖励</button></div>
 </div>
@@ -949,7 +977,9 @@ function killUnit(src,tgt){
 
 
 function battleTick(){
- if(!B||B.over)return;const dt=0.1*B.speed;B.time=(B.time||0)+dt;
+ if(!B||B.over||B.paused)return;const dt=0.1*B.speed;B.time=(B.time||0)+dt;
+ const tt=Math.floor(B.time);if(B._tt!==tt){B._tt=tt;$('btTimer').textContent=String(Math.floor(tt/60)).padStart(2,'0')+':'+String(tt%60).padStart(2,'0');$('btTimer').classList.toggle('hot',B.time>150);}
+ updateBtCards();
  for(const u of B.units){
   if(!u.alive)continue;
   if(u.slowT>0)u.slowT-=dt;if(u.tauntT>0)u.tauntT-=dt;
@@ -1027,6 +1057,8 @@ function castUlt(u){
  if(!u.alive||u.energy<100)return;const ult=u.def.ult;if(!ult)return;
  u.energy=0;u.ultWindup=0;if(u.el)u.el.classList.remove('charging');if(G3)bt3dChargeEnd(u);refreshUnit(u);SFX.ult();
  if(!B.fast){const bn=$('ultBanner');$('ultSkill').textContent=ult.name;$('ultWho').textContent=u.name+' 释放大招';
+  const ucol=({aoe:'#ff9d45',aoeStun:'#ffe14d',aoeSlow:'#7ad8ff',frontAoe:'#ff7a2a',dotAll:'#b07dff'})[ult.type]||'#ffd100';const skEl=$('ultSkill');skEl.style.color=ucol;skEl.style.textShadow='0 0 18px '+ucol+',0 3px 0 #5a3800';
+  const stgEl=$('btStage');stgEl.classList.remove('shake');void stgEl.offsetWidth;stgEl.classList.add('shake');
   if(G3)bt3dUltFx(u);
   const fl=$('ultFlash');if(fl){fl.style.animation='none';void fl.offsetWidth;fl.style.animation='ultFlashA .45s ease-out';}
   const cv=$('ultCv');if(u.isHero)drawChibi(cv,u.def);else drawMonster(cv,u.def.art);
@@ -1088,7 +1120,7 @@ function startBattle(cfg){
  /* cfg: {title, bg, waves, mkFoe(w,i), onEnd(win), fleeLabel} */
  document.querySelectorAll('#btStage .unit').forEach(e=>e.remove());
  $('btLog').innerHTML='';
- B={units:[],waves:cfg.waves,wave:0,speed:1,autoUlt:true,over:false,fast:false,allyDeaths:0,mkFoe:cfg.mkFoe,onEnd:cfg.onEnd,title:cfg.title};
+ B={units:[],waves:cfg.waves,wave:0,speed:1,autoUlt:true,over:false,fast:false,paused:false,allyDeaths:0,mkFoe:cfg.mkFoe,onEnd:cfg.onEnd,title:cfg.title};
  if(USE3D())bt3dInit(cfg.bg);
  S.team.forEach((id,i)=>{if(id){const u=heroUnit(id,i);B.units.push(u);}});
  applyAuras(B.units);
@@ -1098,8 +1130,8 @@ function startBattle(cfg){
  $('battleScr').classList.add('on');
  if(G3)G3.onResize();
  $('btDone').style.display='none';$('btAgain').style.display='none';$('btFlee').style.display='block';
- $('btAuto').textContent='自动大招：开';$('btAuto').classList.add('on');$('btSpd').textContent='×1';
- spawnWave();
+ $('btAuto').classList.add('on');$('btSpd').textContent='×1';$('btPause').textContent='⏸';$('btTimer').textContent='00:00';$('btTimer').classList.remove('hot');$('btMeLv').textContent=S.accLvl||1;
+ spawnWave();buildBtCards();
  clearInterval(btTimer);btTimer=setInterval(battleTick,100);
 }
 function endBattle(win){
@@ -1112,13 +1144,29 @@ function endBattle(win){
 function closeBattle(){$('battleScr').classList.remove('on');clearInterval(btTimer);if(G3)bt3dDispose();B=null;}
 $('btFlee').onclick=()=>{if(B&&!B.over){B.over=true;closeBattle();toast('已撤退');if(curScr==='home')renderHome();}};
 $('btSpd').onclick=e=>{if(!B)return;B.speed=B.speed===1?2:1;e.target.textContent='×'+B.speed;};
-$('btAuto').onclick=e=>{if(!B)return;B.autoUlt=!B.autoUlt;e.target.textContent='自动大招：'+(B.autoUlt?'开':'关');e.target.classList.toggle('on',B.autoUlt);};
+$('btPause').onclick=e=>{if(!B||B.over)return;B.paused=!B.paused;e.target.textContent=B.paused?'▶':'⏸';toast(B.paused?'已暂停':'继续战斗');};
+$('btAuto').onclick=e=>{if(!B)return;B.autoUlt=!B.autoUlt;e.currentTarget.classList.toggle('on',B.autoUlt);toast(B.autoUlt?'自动大招：开':'自动大招：关，能量满后点下方英雄卡释放');};
 $('btSkip').onclick=()=>{
- if(!B||B.over)return;B.fast=true;let n=0;
+ if(!B||B.over)return;B.paused=false;$('btPause').textContent='⏸';B.fast=true;let n=0;
  while(!B.over&&n<4000){for(let i=0;i<10;i++)battleTick();n++;}
  if(!B.over){const a=B.units.filter(u=>u.side==='ally'&&u.alive).reduce((s,u)=>s+u.hp/u.maxhp,0),f=B.units.filter(u=>u.side==='foe'&&u.alive).reduce((s,u)=>s+u.hp/u.maxhp,0);endBattle(a>=f);}
  B.fast=false;
 };
+function buildBtCards(){const box=$('btCards');box.innerHTML='';if(!B)return;
+ for(const u of B.units){if(u.side!=='ally')continue;const d=document.createElement('div');d.className='btc r'+(u.def.rarity||1);
+  const cv=document.createElement('canvas');cv.width=112;cv.height=112;drawChibi(cv,u.def);d.appendChild(cv);
+  const st=document.createElement('div');st.className='stars';st.textContent='★'.repeat(u.star||1);d.appendChild(st);
+  const hp=document.createElement('div');hp.className='bhp';const hpI=document.createElement('i');hp.appendChild(hpI);d.appendChild(hp);
+  const en=document.createElement('div');en.className='ben';const enI=document.createElement('i');en.appendChild(enI);d.appendChild(en);
+  const un=document.createElement('div');un.className='bult';un.textContent=u.def.ult?u.def.ult.name:'';d.appendChild(un);
+  d.onclick=()=>{if(!B||B.over||B.paused)return;if(u.alive&&u.def.ult&&u.energy>=100&&u.ultWindup<=0&&u.windup<=0){u.ultWindup=0.5;if(G3)bt3dCharge(u);if(u.el)u.el.classList.add('charging');}};
+  box.appendChild(d);u.card={root:d,hpI,enI,hpV:-1,enV:-1};}}
+function updateBtCards(){if(!B)return;for(const u of B.units){if(u.side!=='ally'||!u.card)continue;const c=u.card;
+ const hp=Math.max(0,Math.round(u.hp/u.maxhp*100)),en=Math.min(100,Math.round(u.energy));
+ if(c.hpV!==hp){c.hpV=hp;c.hpI.style.width=hp+'%';}
+ if(c.enV!==en){c.enV=en;c.enI.style.width=en+'%';}
+ const rdy=!!(u.alive&&u.energy>=100);if(c.rdy!==rdy){c.rdy=rdy;c.root.classList.toggle('ready',rdy);}
+ const dd=!u.alive;if(c.dd!==dd){c.dd=dd;c.root.classList.toggle('dead',dd);}}}
 /* ================= 关卡战斗入口 ================= */
 function startStageBattle(c,s,elite){
  closeModal();
@@ -1430,7 +1478,10 @@ function bt3dTelegraph(cx,cz,r,colorHex){
  ring.rotation.x=-Math.PI/2;ring.position.set(cx,0.06,cz);G3.scene.add(ring);
  const inner=new THREE.Mesh(new THREE.RingGeometry(r*0.55-0.05,r*0.55,36),new THREE.MeshBasicMaterial({color:new THREE.Color(colorHex),transparent:true,opacity:0.75,side:THREE.DoubleSide,depthWrite:false}));
  inner.rotation.x=-Math.PI/2;inner.position.set(cx,0.06,cz);G3.scene.add(inner);
- bt3dTween(0.75,k=>{disc.material.opacity=0.4*Math.min(1,k*2.2);disc.scale.set(0.35+0.65*k,0.35+0.65*k,0.35+0.65*k);const p=1+0.04*Math.sin(k*22);ring.scale.set(p,p,p);inner.scale.set(p,p,p);},()=>{G3.scene.remove(disc);G3.scene.remove(ring);G3.scene.remove(inner);});
+ const runes=new THREE.Group();const rm=new THREE.MeshBasicMaterial({color:new THREE.Color(colorHex),transparent:true,opacity:0.9,depthWrite:false});
+ for(let i=0;i<8;i++){const a=i/8*Math.PI*2;const rb=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.03,0.3),rm);rb.position.set(Math.cos(a)*r*0.78,0,Math.sin(a)*r*0.78);rb.rotation.y=-a;runes.add(rb);}
+ runes.position.set(cx,0.06,cz);G3.scene.add(runes);
+ bt3dTween(0.75,k=>{disc.material.opacity=0.4*Math.min(1,k*2.2);disc.scale.set(0.35+0.65*k,0.35+0.65*k,0.35+0.65*k);const p=1+0.04*Math.sin(k*22);ring.scale.set(p,p,p);inner.scale.set(p,p,p);runes.rotation.y=k*1.3;},()=>{G3.scene.remove(disc);G3.scene.remove(ring);G3.scene.remove(inner);G3.scene.remove(runes);});
 }
 function bt3dRainDrop(geo,colorHex,cx,cz,r,H,dur,delay,flip,trail){
  const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:new THREE.Color(colorHex),transparent:true}));
