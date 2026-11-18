@@ -75,6 +75,36 @@ input{user-select:text;-webkit-user-select:text}
 .chapHead .t{font-size:16.5px;font-weight:900;color:#ffe9a8}
 .chapHead .stars{margin-left:auto;font-size:12.5px;color:#ffd100}
 .stageGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.mapPanel{position:relative;height:350px;border-radius:16px;overflow:hidden;border:1.5px solid #57468a;margin-bottom:8px;box-shadow:inset 0 0 60px rgba(0,0,0,.35)}
+.map-grass{background:linear-gradient(180deg,#7ec8f7 0%,#a8dcff 26%,#79c25e 27%,#4d8f3e 100%)}
+.map-grave{background:linear-gradient(180deg,#1d1d38 0%,#2c2c52 30%,#3a3a5e 31%,#23233c 100%)}
+.map-cave{background:linear-gradient(180deg,#2a0f0a 0%,#57200f 30%,#6e2f16 31%,#38160d 100%)}
+.mapPanel.eliteMap{filter:hue-rotate(38deg) saturate(1.15)}
+.mapTitle{position:absolute;left:12px;top:10px;z-index:3;color:#fff;font-weight:900;font-size:15px;text-shadow:0 2px 6px rgba(0,0,0,.55)}
+.mapTitle span{display:block;font-size:11px;font-weight:700;opacity:.92;margin-top:2px}
+.mapPath{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.mapDeco{position:absolute;font-size:24px;z-index:1;opacity:.9;transform:translate(-50%,-50%)}
+.mapNode{position:absolute;z-index:2;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:linear-gradient(180deg,#5d7dc9,#3a56a0);border:2.5px solid #dfe9ff;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.45);transition:transform .12s}
+.mapNode:active{transform:scale(.92)}
+.mapNode .mn{font-size:17px;font-weight:900}
+.mapNode.cleared{background:linear-gradient(180deg,#57b368,#2f7d43);border-color:#c9f2d2}
+.mapNode.current{background:linear-gradient(180deg,#ffb62e,#f08c0a);border-color:#ffe1a0;color:#5a2d00;animation:nodePulse 1.3s infinite}
+.mapNode.boss{width:58px;height:58px;margin:-29px 0 0 -29px;background:linear-gradient(180deg,#c94f6d,#8e2438);border-color:#ffc9d4}
+.mapNode.boss.cleared{background:linear-gradient(180deg,#57b368,#2f7d43)}
+.mapNode.boss.current{background:linear-gradient(180deg,#ffb62e,#f08c0a);color:#5a2d00}
+.mapNode.locked{background:linear-gradient(180deg,#555a6e,#333849);border-color:#8b93a8;color:#aab;cursor:default}
+.mapNode .mstars{position:absolute;top:48px;left:50%;transform:translateX(-50%);font-size:10.5px;color:#ffd76a;text-shadow:0 1px 3px #000;white-space:nowrap}
+.mapNode.boss .mstars{top:58px}
+.mapNode .mname{position:absolute;top:50px;left:50%;transform:translateX(-50%);font-size:9px;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap;opacity:.9}
+.mapNode .mboss{position:absolute;top:-9px;right:-14px;font-size:8.5px;background:#ff4757;color:#fff;border-radius:6px;padding:1px 4px;font-weight:900;box-shadow:0 2px 5px rgba(0,0,0,.4)}
+@keyframes nodePulse{0%,100%{box-shadow:0 0 0 0 rgba(255,182,46,.55),0 4px 10px rgba(0,0,0,.45)}50%{box-shadow:0 0 0 9px rgba(255,182,46,0),0 4px 10px rgba(0,0,0,.45)}}
+.chapChips{display:flex;gap:6px;margin-bottom:9px}
+.chapChip{flex:1;background:#241a3f;border:1.5px solid #4a3a75;color:#cfc6f2;border-radius:10px;padding:6px 3px;font-size:11px;font-weight:800;cursor:pointer;line-height:1.45}
+.chapChip.on{background:linear-gradient(180deg,#6a4fd0,#4c2fa3);color:#fff;border-color:#b79cff}
+.chapChip.locked{opacity:.45}
+.unit.windup .fig{filter:brightness(1.4)}
+.unit.charging .fig{filter:brightness(1.3) drop-shadow(0 0 7px #ffd100)}
+.unit.np.charging .unm{color:#ffd100}
 .stageBtn{aspect-ratio:1;border-radius:12px;border:2px solid #57468a;background:linear-gradient(180deg,#33255e,#1f153f);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;cursor:pointer}
 .stageBtn .n{font-size:19px;font-weight:900;color:#ffe9a8}
 .stageBtn .nm{font-size:9.5px;color:#b9aee0;text-align:center;line-height:1.25;padding:0 2px}
@@ -252,6 +282,8 @@ input{user-select:text;-webkit-user-select:text}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
+/* 内测模式：资源无限（金币/钻石/体力/药水自动补满） */
+const TEST_MODE=true;
 /* ================= 工具 ================= */
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -473,16 +505,17 @@ function drawMonster(cv,art){
 const SAVE_KEY='mt_cardrise_save_v1';
 let S=null;
 function newSave(){
- return {gold:6000,gems:1200,stam:120,stamTs:Date.now(),accLvl:1,accXp:0,name:'团长'+irnd(10,99),
+ return {gold:999999,gems:999999,stam:9999,stamTs:Date.now(),accLvl:1,accXp:0,name:'团长'+irnd(10,99),
   heroes:{adai:{lvl:1,xp:0,star:1,shards:0,eq:{}},bingbing:{lvl:1,xp:0,star:1,shards:0,eq:{}},mantou:{lvl:1,xp:0,star:1,shards:0,eq:{}}},
   team:['adai',null,'mantou','bingbing',null],
-  stages:{},elite:{},items:[],potions:{s:3,m:1},shardBank:{},chests:{},
+  stages:{},elite:{},items:[],potions:{s:99,m:99},shardBank:{},chests:{},
   arena:{pts:1000,wins:0,day:'',dayWins:0},summon:{pity:0,total:0,goldTotal:0},
   daily:{date:todayStr(),prog:{},claimed:[]},achClaimed:[],signin:{last:'',count:0},
   guide:{summoned:false,battled:false},uidSeq:1};
 }
 function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
-function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};}
+function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};
+ if(TEST_MODE){S.gold=Math.max(S.gold,999999);S.gems=Math.max(S.gems,999999);S.stam=Math.max(S.stam,9999);S.potions.s=Math.max(S.potions.s,99);S.potions.m=Math.max(S.potions.m,99);}}
 function accXpNeed(l){return Math.round(60*Math.pow(l,1.5));}
 function stamMax(){return 120+S.accLvl*2;}
 function tickStamina(){const now=Date.now();const gain=Math.floor((now-S.stamTs)/45000);
@@ -501,7 +534,7 @@ function heroStats(id){
  st.power=Math.round(st.hp*0.32+st.atk*7.5+st.def*5.5);
  return st;
 }
-function heroXpNeed(l){return Math.round(50*Math.pow(l,1.42));}
+function heroXpNeed(l){return Math.round(30*Math.pow(l,1.35));}
 function gainHeroXp(id,amt){
  const h=S.heroes[id];if(!h)return;const cap=S.accLvl+9;h.xp+=amt;
  while(h.lvl<cap&&h.xp>=heroXpNeed(h.lvl)){h.xp-=heroXpNeed(h.lvl);h.lvl++;}
@@ -537,7 +570,7 @@ function grantRew(r,silent){if(r.gold)S.gold+=r.gold;if(r.gem)S.gems+=r.gem;if(r
 /* ================= 顶栏与导航 ================= */
 function renderTop(){
  $('resGold').textContent=fmtN(S.gold);$('resGem').textContent=fmtN(S.gems);
- $('resStam').textContent=S.stam+'/'+stamMax();
+ $('resStam').textContent=TEST_MODE?'∞':S.stam+'/'+stamMax();
  $('accName').textContent=S.name;$('accLv').textContent='Lv.'+S.accLvl+' 团长';
  $('accXpFill').style.width=clamp(S.accXp/accXpNeed(S.accLvl)*100,0,100)+'%';
  const av=$('avatarBox');if(!av.firstChild){const cv=document.createElement('canvas');cv.width=cv.height=100;av.appendChild(cv);drawChibi(cv,HERO_MAP.niutou);}
@@ -565,7 +598,7 @@ $('buyStam').onclick=()=>{if(S.stam>=stamMax()){toast('体力已满');return;}
  openModal('<h3>补充体力 <span class="x" onclick="closeModal()">✕</span></h3><p style="line-height:1.7">花费 💎30 补充 ⚡60 点体力？<br><span class="dim">当前体力：'+S.stam+'/'+stamMax()+'</span></p><div class="kvBtns"><button class="btn gray" onclick="closeModal()">取消</button><button class="btn green" onclick="S.gems-=30;S.stam+=60;closeModal();toast(\'体力 +60\');renderTop();saveGame();">确认补充</button></div>');};
 $('buyGem').onclick=()=>{toast('钻石可通过成就、日常、竞技场与签到获得');};
 /* ================= 副本主页 ================= */
-let homeMode='normal';
+let homeMode='normal';let homeChap=-1;
 function stageKey(c,s){return (c+1)+'-'+(s+1);}
 function stageUnlocked(c,s,elite){
  if(c===0&&s===0)return true;
@@ -579,24 +612,40 @@ const CHESTS=[{stars:8,rew:{gold:2000},label:'🪙 2000'},{stars:16,rew:{gem:150
 function claimChest(c,elite,i){const key=(elite?'e':'n')+c+'-'+CHESTS[i].stars;if(S.chests[key])return;if(chapterStars(c,elite)<CHESTS[i].stars)return;S.chests[key]=1;grantRew(CHESTS[i].rew);SFX.win();saveGame();renderHome();}
 function foePower(eid,lvl){const E=ENEMIES[eid];const grow=1+(lvl-1)*0.125;const boss=E.role==='boss'?1.25:1;const hp=E.base.hp*grow*boss,atk=E.base.atk*grow*(E.role==='boss'?1.15:1),def=E.base.def*grow;return Math.round(hp*0.32+atk*7.5+def*5.5);}
 function stageRecPower(c,s,elite){const st=CHAPTERS[c].stages[s];let p=0;st.waves.forEach(w=>w.forEach(x=>p+=foePower(x[0],x[1])));return Math.round(p*(elite?1.35:1));}
+const NODE_POS=[{x:10,y:80},{x:27,y:63},{x:15,y:43},{x:34,y:26},{x:54,y:41},{x:51,y:14},{x:70,y:29},{x:88,y:13}];
+function currentStage(elite){const map=elite?S.elite:S.stages;
+ for(let c=0;c<3;c++)for(let s=0;s<8;s++)if(stageUnlocked(c,s,elite)&&!map[stageKey(c,s)])return{c,s};
+ for(let c=0;c<3;c++)for(let s=0;s<8;s++)if(stageUnlocked(c,s,elite)&&map[stageKey(c,s)]<3)return{c,s};
+ return{c:2,s:7};}
+function pickChap(ci){const elite=homeMode==='elite';
+ if(!stageUnlocked(ci,0,elite)){toast('先通关上一章');SFX.err();return;}
+ homeChap=ci;renderHome();}
+function mapDeco(bg){
+ if(bg==='grave')return '<span class="mapDeco" style="left:82%;top:7%">🌙</span><span class="mapDeco" style="left:6%;top:14%">🦉</span><span class="mapDeco" style="left:63%;top:66%">🪦</span><span class="mapDeco" style="left:31%;top:84%">🪦</span>';
+ if(bg==='cave')return '<span class="mapDeco" style="left:84%;top:9%">🌋</span><span class="mapDeco" style="left:8%;top:12%">🔥</span><span class="mapDeco" style="left:60%;top:80%">💎</span><span class="mapDeco" style="left:37%;top:7%">🦇</span>';
+ return '<span class="mapDeco" style="left:85%;top:6%">☀️</span><span class="mapDeco" style="left:5%;top:9%">🌳</span><span class="mapDeco" style="left:67%;top:72%">🌲</span><span class="mapDeco" style="left:23%;top:90%">🌼</span>';}
 function renderHome(){
- const el=$('scr-home');let html='<div class="card" style="margin-bottom:12px;padding:10px 12px"><div style="display:flex;align-items:center;gap:9px"><div style="font-size:21px">⚔️</div><div class="grow" style="flex:1"><div style="font-weight:900;font-size:14.5px">当前阵容战力 <span class="gold">'+fmtN(teamPower())+'</span></div><div class="dim" style="font-size:11.5px">在「英雄」页点击阵容槽位可以调整上阵英雄</div></div><button class="btn sm blue" onclick="goScr(\'heroes\')">调阵容</button></div></div>';
- html+='<div class="modeTabs"><button class="'+(homeMode==='normal'?'on':'')+'" onclick="homeMode=\'normal\';renderHome()">普通副本</button><button class="'+(homeMode==='elite'?'on':'')+'" onclick="homeMode=\'elite\';renderHome()">精英副本 · 英雄碎片</button></div>';
- CHAPTERS.forEach((ch,c)=>{
-  const elite=homeMode==='elite';
-  html+='<div class="chapHead"><span class="t">第'+(c+1)+'章 · '+ch.name+'</span><span class="stars">★ '+chapterStars(c,elite)+' / 24</span></div><div class="stageGrid">';
-  ch.stages.forEach((st,s)=>{
-   const k=stageKey(c,s);const stars=(elite?S.elite:S.stages)[k]||0;const un=stageUnlocked(c,s,elite);
-   html+='<div class="stageBtn '+(st.boss?'boss':'')+(elite?' elite':'')+(un?'':' locked')+'" onclick="openStage('+c+','+s+','+elite+')"><span class="n">'+(un?(s+1):'🔒')+'</span><span class="nm">'+st.n+'</span>'+(stars?'<span class="st">'+'★'.repeat(stars)+'</span>':'')+'</div>';
-  });
-  html+='</div>';
-  const cStars=chapterStars(c,elite);
-  html+='<div class="chestRow">'+CHESTS.map((ch2,i)=>{const key=(elite?'e':'n')+c+'-'+ch2.stars;const got=S.chests[key];const ready=!got&&cStars>=ch2.stars;
-   return '<button class="chestBtn '+(got?'got':ready?'ready':'')+'" '+(ready?'onclick="claimChest('+c+','+elite+','+i+')"':'')+'>🎁 '+ch2.stars+'★ · '+ch2.label+(got?'<br>已领取':ready?'<br>点击领取':'<br>'+cStars+'/'+ch2.stars)+'</button>';}).join('')+'</div>';
-  if(elite)html+='<div class="dim" style="font-size:11px;margin-top:5px">精英副本掉落对应关卡的英雄碎片：'+ch.stages.map((st,s)=>{const hid=ELITE_SHARDS[stageKey(c,s)];return hid?st.n+'→'+HERO_MAP[hid].name.split('·')[0]:'';}).filter(Boolean).join('、')+'</div>';
- });
+ const el=$('scr-home');const elite=homeMode==='elite';const cur=currentStage(elite);
+ const c=homeChap>=0?homeChap:cur.c;const ch=CHAPTERS[c];
+ let html='<div class="card" style="margin-bottom:12px;padding:10px 12px"><div style="display:flex;align-items:center;gap:9px"><div style="font-size:21px">⚔️</div><div class="grow" style="flex:1"><div style="font-weight:900;font-size:14.5px">当前阵容战力 <span class="gold">'+fmtN(teamPower())+'</span></div><div class="dim" style="font-size:11.5px">在「英雄」页点击阵容槽位可以调整上阵英雄</div></div><button class="btn sm blue" onclick="goScr(\'heroes\')">调阵容</button></div></div>';
+ html+='<div class="modeTabs"><button class="'+(homeMode==='normal'?'on':'')+'" onclick="homeMode=\'normal\';homeChap=-1;renderHome()">普通副本</button><button class="'+(homeMode==='elite'?'on':'')+'" onclick="homeMode=\'elite\';homeChap=-1;renderHome()">精英副本 · 英雄碎片</button></div>';
+ html+='<div class="chapChips">'+CHAPTERS.map((cc,ci)=>{const un=stageUnlocked(ci,0,elite);
+  return '<button class="chapChip'+(ci===c?' on':'')+(un?'':' locked')+'" onclick="pickChap('+ci+')">'+(ci===cur.c?'▶ ':'')+'第'+(ci+1)+'章 '+cc.name+'<br>★ '+chapterStars(ci,elite)+' / 24</button>';}).join('')+'</div>';
+ const clearedN=ch.stages.filter((st,s)=>(elite?S.elite:S.stages)[stageKey(c,s)]>0).length;
+ html+='<div class="mapPanel map-'+(ch.bg||'grass')+(elite?' eliteMap':'')+'">'+mapDeco(ch.bg)
+  +'<div class="mapTitle">第'+(c+1)+'章 · '+ch.name+'<span>当前进度：第 '+Math.min(8,clearedN+ (clearedN<8?1:0))+' 关 · 已通关 '+clearedN+' / 8 · ★ '+chapterStars(c,elite)+' / 24</span></div>'
+  +'<svg class="mapPath" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="'+NODE_POS.map(p=>p.x+','+p.y).join(' ')+'" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4" stroke-dasharray="2.6 2"/></svg>'
+  +ch.stages.map((st,s)=>{const k=stageKey(c,s);const stars=(elite?S.elite:S.stages)[k]||0;const un=stageUnlocked(c,s,elite);const isCur=c===cur.c&&s===cur.s;const p=NODE_POS[s];
+   return '<div class="mapNode'+(st.boss?' boss':'')+(un?'':' locked')+(isCur?' current':'')+(stars>0?' cleared':'')+'" style="left:'+p.x+'%;top:'+p.y+'%" onclick="openStage('+c+','+s+','+elite+')"><span class="mn">'+(un?(s+1):'🔒')+'</span>'+(st.boss?'<span class="mboss">BOSS</span>':'')+(stars?'<span class="mstars">'+'★'.repeat(stars)+'</span>':'<span class="mname">'+st.n+'</span>')+'</div>';}).join('')
+  +'</div>';
+ html+='<div class="dim" style="font-size:11.5px;margin:0 0 9px">🟠 橙色节点是当前进度；点任意已解锁节点可挑战，重打已通关关卡凑满 ★★★ 即可解锁扫荡。'+(c!==cur.c?'当前进度在第 '+(cur.c+1)+' 章，点上方 ▶ 章节可快速前往。':'')+'</div>';
+ const cStars=chapterStars(c,elite);
+ html+='<div class="chestRow">'+CHESTS.map((ch2,i)=>{const key=(elite?'e':'n')+c+'-'+ch2.stars;const got=S.chests[key];const ready=!got&&cStars>=ch2.stars;
+  return '<button class="chestBtn '+(got?'got':ready?'ready':'')+'" '+(ready?'onclick="claimChest('+c+','+elite+','+i+')"':'')+'>🎁 '+ch2.stars+'★ · '+ch2.label+(got?'<br>已领取':ready?'<br>点击领取':'<br>'+cStars+'/'+ch2.stars)+'</button>';}).join('')+'</div>';
+ if(elite)html+='<div class="dim" style="font-size:11px;margin-top:5px">精英副本掉落对应关卡的英雄碎片：'+ch.stages.map((st,s)=>{const hid=ELITE_SHARDS[stageKey(c,s)];return hid?st.n+'→'+HERO_MAP[hid].name.split('·')[0]:'';}).filter(Boolean).join('、')+'</div>';
  el.innerHTML=html;
 }
+
 function stageCost(c,s,elite){return elite?12:6+Math.floor((c*8+s)/4);}
 function openStage(c,s,elite){
  const st=CHAPTERS[c].stages[s];const k=stageKey(c,s);
@@ -616,24 +665,28 @@ function grantStageRewards(c,s,elite,stars){
  const st=CHAPTERS[c].stages[s];const k=stageKey(c,s);const first=!S.stages[k]&&!elite||elite&&!S.elite[k];
  const gold=st.rew.gold+(elite?Math.round(st.rew.gold*0.6):0);
  S.gold+=gold;gainAccXp(st.rew.xp);
- S.team.forEach(id=>{if(id)gainHeroXp(id,st.rew.xp);});
+ const heroXp=Math.round(st.rew.xp*1.5);const heroReport=[];
+ S.team.forEach(id=>{if(!id)return;const h=S.heroes[id];const before={lvl:h.lvl,st:heroStats(id)};
+  gainHeroXp(id,heroXp);const after=heroStats(id);
+  heroReport.push({id,lvlUp:h.lvl>before.lvl,lvl:h.lvl,xpGain:heroXp,prog:Math.floor(h.xp)+'/'+heroXpNeed(h.lvl),
+   dHp:after.hp-before.st.hp,dAtk:after.atk-before.st.atk,dDef:after.def-before.st.def});});
  const drops=[];
  if(Math.random()<0.55){const p=Math.random()<0.7?'s':'m';S.potions[p]++;drops.push(p==='s'?'经验药水（小）':'经验药水（大）');}
  if(Math.random()<(elite?0.4:0.22)){const eid=pick(EQUIP_DROPS);S.items.push({uid:S.uidSeq++,itemId:eid});drops.push('装备：'+EQUIPS[eid].name);}
  if(elite){const hid=ELITE_SHARDS[k];if(hid){addShards(hid,irnd(1,2));drops.push(HERO_MAP[hid].name+' 碎片');}}
  if(first&&st.rew.gem){S.gems+=st.rew.gem;drops.push('首通 💎 '+st.rew.gem);}
- return {gold,xp:st.rew.xp,drops};
+ return {gold,xp:st.rew.xp,drops,heroReport};
 }
 function gainAccXp(n){S.accXp+=n;while(S.accXp>=accXpNeed(S.accLvl)){S.accXp-=accXpNeed(S.accLvl);S.accLvl++;setTimeout(()=>toast('🎉 团长等级提升到 '+S.accLvl+' 级！'),600);}}
 function doSweep(c,s,elite,n){
  const cost=stageCost(c,s,elite)*n;
  if(S.stam<cost){toast('体力不足');SFX.err();return;}
  const team=S.team.filter(Boolean);if(team.length<3){toast('至少上阵 3 名英雄');return;}
- S.stam-=cost;dailyProg('spend',cost);
+ if(!TEST_MODE)S.stam-=cost;dailyProg('spend',cost);
  let gold=0;const drops=[];
  for(let i=0;i<n;i++){const r=grantStageRewards(c,s,elite,3);gold+=r.gold;drops.push(...r.drops);dailyProg('battle');}
  closeModal();SFX.coin();saveGame();renderTop();renderHome();
- openModal('<h3>扫荡完成 ×'+n+' <span class="x" onclick="closeModal()">✕</span></h3><p style="line-height:1.8;font-size:13.5px">获得 🪙 '+gold+' 金币，参战英雄各 +'+CHAPTERS[c].stages[s].rew.xp*n+' 经验。'+(drops.length?'<br>掉落：'+drops.join('、'):'')+'</p><div class="kvBtns"><button class="btn" onclick="closeModal()">好的</button></div>');
+ openModal('<h3>扫荡完成 ×'+n+' <span class="x" onclick="closeModal()">✕</span></h3><p style="line-height:1.8;font-size:13.5px">获得 🪙 '+gold+' 金币，参战英雄各 +'+Math.round(CHAPTERS[c].stages[s].rew.xp*1.5)*n+' 经验。'+(drops.length?'<br>掉落：'+drops.join('、'):'')+'</p><div class="kvBtns"><button class="btn" onclick="closeModal()">好的</button></div>');
 }
 /* ================= 英雄页 ================= */
 let heroFilter='all';
@@ -758,10 +811,24 @@ let B=null,btTimer=null;
 const ALLY_POS=[{x:27,y:35},{x:27,y:65},{x:11,y:18},{x:11,y:50},{x:11,y:82}];
 const FOE_POS=[{x:73,y:35},{x:73,y:65},{x:89,y:18},{x:89,y:50},{x:89,y:82}];
 let unitSeq=1;
+const HOME_POS={ally:[{x:-1.9,z:-0.2},{x:-1.2,z:1.1},{x:-3.9,z:0.9},{x:-3.6,z:2.0},{x:-3.2,z:3.0}],foe:[{x:1.9,z:0.2},{x:1.2,z:-1.1},{x:3.9,z:-0.9},{x:3.6,z:-2.0},{x:3.2,z:-3.0}]};
+function unitRange(u){
+ const basic=u.def.basic||{};
+ if(basic.type==='heal')return 99;
+ const mw=['sword','axe','shield','dagger','claw'];
+ if(u.isHero&&mw.includes(u.def.weapon))return 1.25;
+ if(u.isHero&&u.row==='front')return 1.25;
+ if(u.isHero)return {bow:5.4,staff:5.0,wand:4.7,orb:4.5,totem:4.3}[u.def.weapon]||4.5;
+ if(['cult','plague','lich'].includes(u.def.art))return 4.8;
+ return 1.25;
+}
 function mkUnit(side,def,lvl,stats,slot,isHero,star){
  const u={uid:unitSeq++,side,def,name:def.name,lvl,slot,row:slot<2?'front':'back',isHero:!!isHero,star:star||1,
   maxhp:stats.hp,hp:stats.hp,atk:stats.atk,defense:stats.def,spd:stats.spd,crit:stats.crit,
   energy:irnd(5,20),alive:true,atkCd:rnd(0.4,1.1),stun:0,slowT:0,slowAmt:0,shield:0,tauntT:0,dots:[],hots:[],buffAtkPct:0,ultCd:0};
+ const hp0=HOME_POS[side][slot];u.px=hp0.x;u.pz=hp0.z;u.homeX=hp0.x;u.homeZ=hp0.z;
+ u.faceA=side==='ally'?Math.PI/2:-Math.PI/2;u.curTgt=null;u.windup=0;u.pendingAtk=null;u.ultWindup=0;
+ u.range=unitRange(u);u.melee=u.range<2;
  return u;
 }
 function heroUnit(id,slot){
@@ -795,9 +862,8 @@ function unitEl(u){
   bt3dAddUnit(u);
  }else{
   d.className='unit'+(u.side==='foe'?' foe':'');
-  const pos=(u.side==='ally'?ALLY_POS:FOE_POS)[u.slot];d.style.left=pos.x+'%';d.style.top=pos.y+'%';
   d.innerHTML='<div class="ulv">Lv.'+u.lvl+'</div><div class="fig'+(u.side==='foe'?' flip':'')+'"><canvas width="128" height="128"></canvas></div><div class="unm">'+u.name+'</div><div class="bars"><div class="hpbar"><i style="width:100%"></i></div><div class="enbar"><i style="width:0%"></i></div></div><span class="shieldTag" style="display:none">🛡️</span>';
-  $('btStage').appendChild(d);
+  $('btStage').appendChild(d);syncUnitPos(u);
   const cv=d.querySelector('canvas');
   if(u.isHero)drawChibi(cv,u.def);else drawMonster(cv,u.def.art);
  }
@@ -819,7 +885,10 @@ function refreshUnit(u){
  u.el.querySelector('.shieldTag').style.display=u.shield>0?'block':'none';
 }
 function btLogFn(msg){const l=$('btLog');const d=document.createElement('div');d.textContent=msg;l.appendChild(d);while(l.children.length>4)l.removeChild(l.firstChild);}
-function stagePos(u){if(G3&&u.g3)return bt3dProject(u);const pos=(u.side==='ally'?ALLY_POS:FOE_POS)[u.slot];const st=$('btStage');return {x:pos.x/100*st.clientWidth,y:pos.y/100*st.clientHeight+16};}
+function stagePos(u){if(G3&&u.g3)return bt3dProject(u);const st=$('btStage');return {x:(u.px+5.6)/11.2*(st.clientWidth||360),y:(u.pz+3.8)/7.6*(st.clientHeight||480)+14};}
+function syncUnitPos(u){if(!G3&&u.el){u.el.style.left=((u.px+5.6)/11.2*100)+'%';u.el.style.top=((u.pz+3.8)/7.6*100)+'%';}}
+function dist2d(a,b){const dx=a.px-b.px,dz=a.pz-b.pz;return Math.sqrt(dx*dx+dz*dz);}
+function moveToward(u,tx,tz,maxStep){const dx=tx-u.px,dz=tz-u.pz;const d=Math.sqrt(dx*dx+dz*dz);if(d<0.01)return;const s=Math.min(d,maxStep);u.px+=dx/d*s;u.pz+=dz/d*s;u.faceA=Math.atan2(dx,dz);}
 function floatDmg(u,txt,cls){if(B.fast)return;const stg=$('btStage');if(stg.querySelectorAll('.dmgFloat').length>22&&cls!=='crit')return;const p=stagePos(u);const d=document.createElement('div');d.className='dmgFloat '+(cls||'');d.textContent=txt;
  d.style.left=p.x+'px';d.style.top=p.y+'px';$('btStage').appendChild(d);setTimeout(()=>d.remove(),880);}
 function fxSlash(u){if(B.fast||G3)return;const p=stagePos(u);const d=document.createElement('div');d.className='slashFx';d.style.left=(p.x-26)+'px';d.style.top=(p.y-20)+'px';$('btStage').appendChild(d);setTimeout(()=>d.remove(),240);}
@@ -869,19 +938,65 @@ function doHeal(src,tgt,amt,silent){
  tgt.hp=Math.min(tgt.maxhp,tgt.hp+a);if(!silent)floatDmg(tgt,'+'+a,'heal');refreshUnit(tgt);
 }
 function killUnit(src,tgt){
- tgt.alive=false;tgt.hp=0;tgt.energy=0;
+ tgt.alive=false;tgt.hp=0;tgt.energy=0;tgt.windup=0;tgt.pendingAtk=null;tgt.ultWindup=0;
+ if(tgt.el)tgt.el.classList.remove('windup','charging');
  if(G3)bt3dDie(tgt);
  if(tgt.side==='ally')B.allyDeaths++;
  btLogFn('💀 '+tgt.name+' 阵亡'+(src?'（'+src.name+'）':''));
  refreshUnit(tgt);checkBattleEnd();
 }
-function basicAttack(u){
- const basic=u.def.basic||{type:'dmg',target:'front',mult:1};
- if(basic.type==='heal'){const t=pickHealTarget(u);if(!t)return;
-  if(t.hp>=t.maxhp&&Math.random()<0.5){const t2=pickTarget(u,'front');if(t2){rangedOrMelee(u,t2,()=>dealDmg(u,t2,basic.mult));}}
-  else{rangedOrMelee(u,t,()=>{doHeal(u,t,Math.round(u.atk*basic.mult));u.energy=clamp(u.energy+30,0,100);});}
-  return;}
- const t=pickTarget(u,basic.target);if(!t)return;
+
+
+
+function battleTick(){
+ if(!B||B.over)return;const dt=0.1*B.speed;B.time=(B.time||0)+dt;
+ for(const u of B.units){
+  if(!u.alive)continue;
+  if(u.slowT>0)u.slowT-=dt;if(u.tauntT>0)u.tauntT-=dt;
+  for(let i=u.dots.length-1;i>=0;i--){const d=u.dots[i];d.t-=dt;d.tick-=dt;
+   if(d.tick<=0){d.tick=1;const dmg=Math.max(1,Math.round(d.amt*100/(100+u.defense)));u.hp-=dmg;floatDmg(u,'毒 -'+dmg,'hurt');if(u.hp<=0){killUnit(d.src,u);} }
+   if(d.t<=0||!u.alive)u.dots.splice(i,1);}
+  if(!u.alive)continue;
+  for(let i=u.hots.length-1;i>=0;i--){const h=u.hots[i];h.t-=dt;h.tick-=dt;
+   if(h.tick<=0){h.tick=1;doHeal(h.src,u,h.amt,true);floatDmg(u,'+'+h.amt,'heal');}
+   if(h.t<=0)u.hots.splice(i,1);}
+  const spdF=u.spd*(u.slowT>0?1-u.slowAmt:1);
+  u.atkCd-=dt*spdF;
+  if(u.stun>0){u.stun-=dt;syncUnitPos(u);refreshUnit(u);continue;}
+  if(u.ultWindup>0){u.ultWindup-=dt;
+   if(u.ultWindup<=0){if(u.el)u.el.classList.remove('charging');if(G3)bt3dChargeEnd(u);castUlt(u);if(B.over)return;}
+   syncUnitPos(u);refreshUnit(u);continue;}
+  if(u.windup>0){u.windup-=dt;
+   if(u.windup<=0&&u.pendingAtk){const f=u.pendingAtk;u.pendingAtk=null;if(u.el)u.el.classList.remove('windup');f();if(B.over)return;}
+   syncUnitPos(u);refreshUnit(u);continue;}
+  const basic=u.def.basic||{type:'dmg',target:'front',mult:1};
+  if(basic.type==='heal'){
+   if(u.atkCd<=0){const t=pickHealTarget(u);
+    if(t&&t.hp<t.maxhp){u.atkCd+=2.6;startWindup(u,()=>executeHeal(u));}
+    else if(Math.random()<0.6){const f=pickTarget(u,'front');if(f){u.atkCd+=2.6;u.curTgt=f;startWindup(u,()=>executeBasic(u,f));}}}
+  }else{
+   if(u.side==='foe'){const tn=alliesOf(u).find(a=>a.tauntT>0);if(tn&&u.curTgt!==tn)u.curTgt=tn;}
+   if(!u.curTgt||!u.curTgt.alive)u.curTgt=pickTarget(u,basic.target);
+   const t=u.curTgt;
+   if(t){
+    if(dist2d(u,t)>u.range){
+     const ang=Math.atan2(u.pz-t.pz,u.px-t.px)+(u.slot-2)*0.32;
+     moveToward(u,t.px+Math.cos(ang)*u.range*0.92,t.pz+Math.sin(ang)*u.range*0.92,2.7*dt*(u.slowT>0?1-u.slowAmt:1));
+    }else{
+     u.faceA=Math.atan2(t.px-u.px,t.pz-u.pz);
+     if(u.atkCd<=0){u.atkCd+=2.6;startWindup(u,()=>executeBasic(u,t));}
+    }
+   }else if(dist2d(u,{px:u.homeX,pz:u.homeZ})>0.25)moveToward(u,u.homeX,u.homeZ,1.6*dt);
+  }
+  if(u.energy>=100&&u.def.ult&&u.windup<=0&&u.ultWindup<=0&&(B.autoUlt||u.side==='foe')){u.ultWindup=0.5;if(G3)bt3dCharge(u);if(u.el)u.el.classList.add('charging');}
+  syncUnitPos(u);refreshUnit(u);
+ }
+}
+function startWindup(u,fn){u.windup=u.melee?0.3:0.38;u.pendingAtk=fn;if(G3)bt3dWindup(u);if(u.el)u.el.classList.add('windup');}
+function executeBasic(u,t){
+ if(!u.alive)return;const basic=u.def.basic||{type:'dmg',target:'front',mult:1};
+ if(!t||!t.alive)t=pickTarget(u,basic.target);if(!t)return;
+ u.faceA=Math.atan2(t.px-u.px,t.pz-u.pz);
  rangedOrMelee(u,t,()=>{
   dealDmg(u,t,basic.mult);
   if(u.isHero&&u.star>=3&&u.def.passive&&u.def.passive.key==='extraShot'&&t.alive&&Math.random()<0.25)setTimeout(()=>{if(t.alive&&u.alive)dealDmg(u,t,0.6);},160);
@@ -889,15 +1004,21 @@ function basicAttack(u){
  });
  u.energy=clamp(u.energy+30,0,100);
 }
+function executeHeal(u){
+ if(!u.alive)return;const basic=u.def.basic;const t=pickHealTarget(u);if(!t)return;
+ if(B.fast){doHeal(u,t,Math.round(u.atk*basic.mult));u.energy=clamp(u.energy+30,0,100);return;}
+ fxProj(u,t,'#7ddb4a');setTimeout(()=>{if(u.alive&&t.alive)doHeal(u,t,Math.round(u.atk*basic.mult));},170);
+ u.energy=clamp(u.energy+30,0,100);
+}
 function rangedOrMelee(u,t,hitFn){
  if(B&&B.fast){hitFn();return;}
- const ranged=u.row==='back'||['bow','staff','wand','orb','totem'].includes(u.def.weapon);
+ const ranged=!u.melee;
  if(ranged){fxProj(u,t,u.side==='ally'?'#ffd76a':'#ff8a7a');setTimeout(()=>{if(u.alive)hitFn();},B.fast?0:170);}
  else{lunge(u);setTimeout(()=>{if(u.alive)hitFn();},B.fast?0:110);}
 }
 function castUlt(u){
  if(!u.alive||u.energy<100)return;const ult=u.def.ult;if(!ult)return;
- u.energy=0;refreshUnit(u);SFX.ult();
+ u.energy=0;u.ultWindup=0;if(u.el)u.el.classList.remove('charging');if(G3)bt3dChargeEnd(u);refreshUnit(u);SFX.ult();
  if(!B.fast){const bn=$('ultBanner');$('ultSkill').textContent=ult.name;$('ultWho').textContent=u.name+' 释放大招';
   if(G3)bt3dUltFx(u);
   const fl=$('ultFlash');if(fl){fl.style.animation='none';void fl.offsetWidth;fl.style.animation='ultFlashA .45s ease-out';}
@@ -923,28 +1044,10 @@ function castUlt(u){
    if(dead.length){const t=dead[0];t.alive=true;t.hp=Math.round(t.maxhp*0.5);t.energy=30;if(G3)bt3dRevive(t);btLogFn('✨ '+t.name+' 被复活了！');refreshUnit(t);}
    else alliesOf(u).forEach(a=>doHeal(u,a,Math.round(A*ult.mult)));SFX.heal();break;}
  }
+ if(G3&&!B.fast)bt3dUltEffect(u,ult);
  B.units.forEach(refreshUnit);
 }
-function battleTick(){
- if(!B||B.over)return;const dt=0.1*B.speed;B.time=(B.time||0)+dt;
- for(const u of B.units){
-  if(!u.alive)continue;
-  if(u.stun>0){u.stun-=dt;continue;}
-  if(u.slowT>0)u.slowT-=dt;if(u.tauntT>0)u.tauntT-=dt;
-  for(let i=u.dots.length-1;i>=0;i--){const d=u.dots[i];d.t-=dt;d.tick-=dt;
-   if(d.tick<=0){d.tick=1;const dmg=Math.max(1,Math.round(d.amt*100/(100+u.defense)));u.hp-=dmg;floatDmg(u,'毒 -'+dmg,'hurt');if(u.hp<=0){killUnit(d.src,u);} }
-   if(d.t<=0||!u.alive)u.dots.splice(i,1);}
-  if(!u.alive)continue;
-  for(let i=u.hots.length-1;i>=0;i--){const h=u.hots[i];h.t-=dt;h.tick-=dt;
-   if(h.tick<=0){h.tick=1;doHeal(h.src,u,h.amt,true);floatDmg(u,'+'+h.amt,'heal');}
-   if(h.t<=0)u.hots.splice(i,1);}
-  const spdF=u.spd*(u.slowT>0?1-u.slowAmt:1);
-  u.atkCd-=dt*spdF;
-  if(u.atkCd<=0){u.atkCd+=2.6;basicAttack(u);if(B.over)return;}
-  if(u.energy>=100){if(B.autoUlt||u.side==='foe')castUlt(u);}
-  refreshUnit(u);
- }
-}
+
 function checkBattleEnd(){
  if(!B||B.over)return;
  const alliesAlive=B.units.some(u=>u.side==='ally'&&u.alive);
@@ -1008,21 +1111,23 @@ function startStageBattle(c,s,elite){
  if(team.length<1){toast('先去「英雄」页上阵至少 1 名英雄');SFX.err();return;}
  const cost=stageCost(c,s,elite);
  if(S.stam<cost){toast('体力不足（需要 ⚡'+cost+'）');SFX.err();return;}
- S.stam-=cost;dailyProg('spend',cost);renderTop();saveGame();
+ if(!TEST_MODE)S.stam-=cost;dailyProg('spend',cost);renderTop();saveGame();
  const st=CHAPTERS[c].stages[s];const k=stageKey(c,s);
  startBattle({title:(elite?'精英 · ':'')+st.n+'（'+CHAPTERS[c].name+' '+(s+1)+'）',bg:CHAPTERS[c].bg,
   waves:st.waves,
   mkFoe:(w,i)=>{const sorted=[...st.waves[B.wave]].sort((a,b)=>((ENEMIES[b[0]].role==='tank'||ENEMIES[b[0]].role==='boss')?1:0)-((ENEMIES[a[0]].role==='tank'||ENEMIES[a[0]].role==='boss')?1:0));return foeUnit(w[0],w[1],st.waves[B.wave].indexOf(w));},
   onEnd(win){
    dailyProg('battle');
-   if(!win){openModal('<h3>败北…… <span class="x" onclick="closeModal();closeBattle();renderHome()">✕</span></h3><p style="line-height:1.8;font-size:13.5px">敌人的强度超出了预期。<br><span class="dim">提升英雄等级、升星、穿戴装备，或调整前后排阵容再来挑战。</span></p><div class="kvBtns"><button class="btn gray" onclick="closeModal();closeBattle();renderHome()">返回副本</button><button class="btn blue" onclick="closeModal();closeBattle();goScr(\'heroes\')">强化英雄</button></div>');saveGame();return;}
+   if(!win){openModal('<h3>败北…… <span class="x" onclick="closeModal();closeBattle();renderHome()">✕</span></h3><p style="line-height:1.8;font-size:13.5px">敌人的强度超出了预期。<br><span class="dim">提升英雄等级、升星、穿戴装备，或调整前后排阵容再来挑战。</span></p><div class="kvBtns"><button class="btn gray" onclick="closeModal();closeBattle();renderHome()">返回</button><button class="btn" onclick="closeModal();closeBattle();startStageBattle('+c+','+s+','+elite+')">再打一次</button><button class="btn blue" onclick="closeModal();closeBattle();goScr(\'heroes\')">强化英雄</button></div>');saveGame();return;}
    const stars=B.allyDeaths===0?3:B.allyDeaths===1?2:1;
    const r=grantStageRewards(c,s,elite,stars);
-   const map=elite?S.elite:S.stages;map[k]=Math.max(map[k]||0,stars);
+   const map=elite?S.elite:S.stages;map[k]=Math.max(map[k]||0,stars);homeChap=-1;
+   const nc=s<7?c:c+1,ns=s<7?s+1:0;const hasNext=nc<CHAPTERS.length&&stageUnlocked(nc,ns,elite);
    saveGame();renderTop();
    openModal('<h3>🎉 胜利！<span style="color:#ffd100">'+'★'.repeat(stars)+'<span class="dim">'+'★'.repeat(3-stars)+'</span></span> <span class="x" onclick="closeModal();closeBattle();renderHome()">✕</span></h3>'
-   +'<p style="line-height:1.85;font-size:13.5px">获得 🪙 '+r.gold+' 金币 · 团长经验 +'+r.xp+'<br>参战英雄各 +'+r.xp+' 经验'+(r.drops.length?'<br>掉落：'+r.drops.join('、'):'')+(stars>=3?'<br><span class="grn">三星通关！本关已解锁扫荡</span>':'<br><span class="dim">全员存活可得三星，解锁扫荡</span>')+'</p>'
-   +'<div class="kvBtns"><button class="btn gray" onclick="closeModal();closeBattle();renderHome()">返回副本</button><button class="btn" onclick="closeModal();closeBattle();startStageBattle('+c+','+s+','+elite+')">再来一场</button></div>');
+   +'<p style="line-height:1.85;font-size:13.5px">获得 🪙 '+r.gold+' 金币 · 团长经验 +'+r.xp+(r.drops.length?'<br>掉落：'+r.drops.join('、'):'')+(stars>=3?'<br><span class="grn">三星通关！本关已解锁扫荡</span>':'<br><span class="dim">全员存活可得三星，解锁扫荡</span>')+'</p>'
+   +'<div style="background:#17102a;border:1px solid #3a2c5e;border-radius:10px;padding:8px 11px;margin-top:4px">'+r.heroReport.map(hr=>'<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2.5px 0"><span>'+HERO_MAP[hr.id].name+'</span>'+(hr.lvlUp?'<span class="grn" style="font-weight:800">⬆ Lv.'+hr.lvl+'！生命+'+hr.dHp+' 攻击+'+hr.dAtk+' 防御+'+hr.dDef+'</span>':'<span class="dim">经验 +'+hr.xpGain+'（'+hr.prog+'）</span>')+'</div>').join('')+'</div>'
+   +'<div class="kvBtns"><button class="btn gray" onclick="closeModal();closeBattle();renderHome()">返回</button><button class="btn blue" onclick="closeModal();closeBattle();startStageBattle('+c+','+s+','+elite+')">再打一次</button>'+(hasNext?'<button class="btn" onclick="closeModal();closeBattle();startStageBattle('+nc+','+ns+','+elite+')">下一关 ▶</button>':'')+'</div>');
   }});
 }
 /* ================= 竞技场 ================= */
@@ -1206,8 +1311,8 @@ function bt3dInit(bg){
  renderer.domElement.className='g3cv';st.insertBefore(renderer.domElement,st.firstChild);
  const scene=new THREE.Scene();
  scene.fog=new THREE.Fog(bg==='grave'?0x23233a:bg==='cave'?0x2a140f:0x2c4630,13,24);
- const camera=new THREE.PerspectiveCamera(52,(st.clientWidth||360)/(st.clientHeight||480),0.1,60);
- camera.position.set(0,4.9,7.6);camera.lookAt(0,0.5,0);
+ const camera=new THREE.PerspectiveCamera(55,(st.clientWidth||360)/(st.clientHeight||480),0.1,60);
+ camera.position.set(0,6.9,9.0);camera.lookAt(0,0.3,-0.2);
  scene.add(new THREE.HemisphereLight(0xcfe8ff,0x33241a,0.95));
  const dl=new THREE.DirectionalLight(0xfff1d6,0.9);dl.position.set(4,9,5);dl.castShadow=true;
  dl.shadow.mapSize.set(1024,1024);dl.shadow.camera.left=-7;dl.shadow.camera.right=7;dl.shadow.camera.top=7;dl.shadow.camera.bottom=-7;scene.add(dl);
@@ -1228,7 +1333,13 @@ function bt3dFrame(){
  for(let i=G3.tweens.length-1;i>=0;i--){const tw=G3.tweens[i];tw.t+=dt;const k=Math.min(1,tw.t/tw.dur);tw.fn(tw.ease?tw.ease(k):k);if(k>=1){G3.tweens.splice(i,1);if(tw.end)tw.end();}}
  if(B){const t=now/1000;
   for(const u of B.units){if(!u.g3)continue;const g=u.g3;
-   if(!g.dead){g.bob.position.y=Math.sin(t*2.2+g.phase)*(g.fly?0.13:0.05);}
+   const kk=Math.min(1,dt*9);g.grp.position.x+=(u.px-g.grp.position.x)*kk;g.grp.position.z+=(u.pz-g.grp.position.z)*kk;
+   let da=u.faceA-g.grp.rotation.y;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;g.grp.rotation.y+=da*Math.min(1,dt*10);
+   g.hopY=(g.hopY||0)*Math.max(0,1-dt*7);g.lungeZ=(g.lungeZ||0)*Math.max(0,1-dt*7);
+   if(!g.dead){g.bob.position.y=Math.sin(t*2.2+g.phase)*(g.fly?0.13:0.05)+(g.hopY||0);}
+   g.bob.position.z=g.lungeZ||0;
+   if(g.leanT>0){g.leanT-=dt;g.spin.rotation.x=-0.24*Math.sin(Math.max(0,g.leanT)/0.35*Math.PI);}
+   if(u.ultWindup>0){const p=0.55+0.45*Math.sin(t*14);g.mats.forEach(m=>m.emissive.setRGB(0.55*p,0.42*p,0.05*p));}
    if(u.el){const p=bt3dProject(u);u.el.style.left=p.x+'px';u.el.style.top=p.y+'px';}
   }}
  G3.renderer.render(G3.scene,G3.camera);
@@ -1239,8 +1350,8 @@ function bt3dAddUnit(u){
  const model=u.isHero?buildHero3D(u.def):buildMonster3D(u.def.art);
  const grp=new THREE.Group(),spin=new THREE.Group(),bob=new THREE.Group();
  grp.add(spin);spin.add(bob);bob.add(model);
- const pos=SLOT3D[u.side][u.slot];const baseY=model.userData.fly||0;
- grp.position.set(pos.x,baseY-1.5,pos.z);grp.rotation.y=u.side==='ally'?Math.PI/2:-Math.PI/2;
+ const pos={x:u.px,z:u.pz};const baseY=model.userData.fly||0;
+ grp.position.set(pos.x,baseY-1.5,pos.z);grp.rotation.y=u.faceA;
  G3.scene.add(grp);
  const mats=[];model.traverse(m=>{if(m.isMesh){m.castShadow=true;if(!mats.includes(m.material))mats.push(m.material);}});
  u.g3={grp,spin,bob,mats,phase:Math.random()*6.28,bx:pos.x,bz:pos.z,baseY,head:model.userData.head||1.4,fly:model.userData.fly||0,dead:false};
@@ -1252,8 +1363,28 @@ function bt3dProject(u){
  v.project(G3.camera);
  return {x:(v.x*0.5+0.5)*(st.clientWidth||360),y:(-v.y*0.5+0.5)*(st.clientHeight||480)};
 }
-function bt3dLunge(u){if(!u.g3)return;const dir=u.side==='ally'?1:-1,bx=u.g3.bx;
- bt3dTween(0.24,k=>{if(u.g3)u.g3.grp.position.x=k<0.4?bx+dir*0.62*(k/0.4):bx+dir*0.62*(1-(k-0.4)/0.6);});}
+function bt3dLunge(u){if(!u.g3)return;u.g3.lungeZ=0.4;u.g3.hopY=0.14;}
+function bt3dWindup(u){if(u.g3)u.g3.leanT=0.35;}
+function bt3dCharge(u){}
+function bt3dChargeEnd(u){if(u.g3)u.g3.mats.forEach(m=>m.emissive.setHex(m.userData.e0||0));}
+function bt3dRing(cx,cz,color,dur,maxR){const m=new THREE.Mesh(new THREE.RingGeometry(0.42,0.55,36),new THREE.MeshBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:0.85,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.set(cx,0.06,cz);G3.scene.add(m);bt3dTween(dur||0.45,k=>{const s=0.6+(maxR||2.1)*k;m.scale.set(s,s,s);m.material.opacity=0.85*(1-k);},()=>{G3.scene.remove(m);});}
+function bt3dBurst(cx,cz,color,n){for(let i=0;i<(n||7);i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,6),new THREE.MeshBasicMaterial({color:new THREE.Color(color),transparent:true}));const a=Math.random()*6.28,r=0.25+Math.random()*0.5;m.position.set(cx+Math.cos(a)*r,0.5,cz+Math.sin(a)*r);G3.scene.add(m);const vy=1+Math.random()*1.2;bt3dTween(0.55,k=>{m.position.y=0.5+vy*k;m.material.opacity=1-k;},()=>{G3.scene.remove(m);});}}
+function bt3dUltEffect(u,ult){
+ const foes=foesOf(u),allies=alliesOf(u);
+ const ctr=arr=>arr.length?{x:arr.reduce((s,x)=>s+x.px,0)/arr.length,z:arr.reduce((s,x)=>s+x.pz,0)/arr.length}:{x:u.px,z:u.pz};
+ switch(ult.type){
+  case 'aoe':{const c=ctr(foes);bt3dRing(c.x,c.z,'#ff9d45',0.5,2.4);bt3dBurst(c.x,c.z,'#ffb62e',9);break;}
+  case 'aoeStun':{const c=ctr(foes);bt3dRing(c.x,c.z,'#ffe14d',0.5,2.4);bt3dBurst(c.x,c.z,'#fff3a0',9);break;}
+  case 'aoeSlow':{const c=ctr(foes);bt3dRing(c.x,c.z,'#7ad8ff',0.5,2.4);bt3dBurst(c.x,c.z,'#aee6ff',9);break;}
+  case 'frontAoe':{const c=ctr(foes);bt3dRing(c.x,c.z,'#ff7a2a',0.5,2.0);bt3dBurst(c.x,c.z,'#ff9d45',8);break;}
+  case 'dotAll':{const c=ctr(foes);bt3dRing(c.x,c.z,'#b07dff',0.55,2.4);bt3dBurst(c.x,c.z,'#c07dff',9);break;}
+  case 'healAll':case 'hotAll':{allies.forEach(a=>bt3dBurst(a.px,a.pz,'#7ddb4a',5));const c=ctr(allies);bt3dRing(c.x,c.z,'#7ddb4a',0.5,2.2);break;}
+  case 'shieldHeal':case 'tauntShield':{bt3dRing(u.px,u.pz,'#ffd100',0.5,1.8);bt3dBurst(u.px,u.pz,'#ffe9a8',7);break;}
+  case 'snipe':case 'backstab':{const t=foes[0];if(t){bt3dRing(t.px,t.pz,'#ff5a4e',0.4,1.1);bt3dBurst(t.px,t.pz,'#ff8a7a',6);}break;}
+  case 'revive':{bt3dRing(u.px,u.pz,'#fff3a0',0.6,2.0);bt3dBurst(u.px,u.pz,'#fff3a0',10);break;}
+  default:bt3dBurst(u.px,u.pz,'#ffd76a',6);
+ }
+}
 function bt3dProjectile(a,b,color){
  if(!a.g3||!b.g3)return;
  const m=new THREE.Mesh(new THREE.SphereGeometry(0.09,10,8),new THREE.MeshBasicMaterial({color:new THREE.Color(color)}));
