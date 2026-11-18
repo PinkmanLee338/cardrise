@@ -1161,7 +1161,7 @@ function endBattle(win){
  if(!B||B.over)return;B.over=true;clearInterval(btTimer);
  if(win)SFX.win();else SFX.lose();
  btLogFn(win?'🎉 胜利！':'💀 败北……');
- if(win&&G3)B.units.filter(u=>u.side==='ally'&&u.alive&&u.g3).forEach((u,i)=>{setTimeout(()=>{if(!u.g3)return;bt3dTween(0.9,k=>{if(u.g3)u.g3.hopY=Math.abs(Math.sin(k*Math.PI*2))*0.45;},()=>{if(u.g3)u.g3.hopY=0;});bt3dSparks(u,0xffd76a,8);},i*130);});
+ if(win&&G3)B.units.filter(u=>u.side==='ally'&&u.alive&&u.g3).forEach((u,i)=>{setTimeout(()=>{if(!u.g3)return;bt3dTween(0.8,k=>{if(u.g3)u.g3.hopY=Math.abs(Math.sin(k*Math.PI*2))*0.55;},()=>{if(u.g3)u.g3.hopY=0;});bt3dSparks(u,0xffd76a,8);},i*70);});
  $('btFlee').style.display='none';
  setTimeout(()=>{if(B)B.onEnd(win);},B.fast?50:900);
 }
@@ -1434,7 +1434,7 @@ function bt3dInit(bg){
  TORCH_POS.forEach((tp,ti)=>{const tx2=tp[0],tz2=tp[1];if(perpA(tx2,tz2)<3.4)return;
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,1.1,6),new THREE.MeshLambertMaterial({color:0x4a3826}));pole.position.set(tx2,0.55,tz2);scene.add(pole);
   const fl=new THREE.Mesh(new THREE.ConeGeometry(0.19,0.52,7),new THREE.MeshBasicMaterial({color:bg==='grave'?0x7ad8ff:0xffa63d,transparent:true,opacity:0.95,fog:false}));fl.position.set(tx2,1.36,tz2);scene.add(fl);
-  FLAMES.push({mesh:fl,ph:ti*1.7,x:tx2});});
+  FLAMES.push({mesh:fl,ph:ti*1.7,x:tx2,hue:bg==='grave'?0.55:0.075});});
  function treeAt(x,z,s){const g=new THREE.Group();
   if(bg==='cave'){const c=new THREE.Mesh(new THREE.ConeGeometry(0.22*s,1.1*s,5),new THREE.MeshLambertMaterial({color:0xff8a3c,emissive:0x903c00}));c.position.y=0.55*s;c.castShadow=true;g.add(c);}
   else if(bg==='grave'){const tm=new THREE.MeshLambertMaterial({color:0x3a3444});const t=new THREE.Mesh(new THREE.CylinderGeometry(0.05*s,0.09*s,1.1*s,6),tm);t.position.y=0.55*s;t.rotation.z=0.12;t.castShadow=true;g.add(t);
@@ -1472,10 +1472,10 @@ function bt3dInit(bg){
 function bt3dFrame(){
  const now=performance.now();let dt=Math.min(0.05,(now-G3.last)/1000);if(B&&B.hitStop>0)dt*=0.12;G3.last=now;
  for(let i=G3.tweens.length-1;i>=0;i--){const tw=G3.tweens[i];tw.t+=dt;const k=Math.min(1,tw.t/tw.dur);tw.fn(tw.ease?tw.ease(k):k);if(k>=1){G3.tweens.splice(i,1);if(tw.end)tw.end();}}
- if(G3.flames&&G3.flames.length){const ft=now/1000;for(const f of G3.flames){f.mesh.scale.set(1+Math.sin(ft*11+f.ph)*0.22,1+Math.sin(ft*13.7+f.ph)*0.4,1);f.mesh.position.x=f.x+Math.sin(ft*7+f.ph)*0.03;}}
+ if(G3.flames&&G3.flames.length){const ft=now/1000;for(const f of G3.flames){f.mesh.scale.set(1+Math.sin(ft*11+f.ph)*0.22,1+Math.sin(ft*13.7+f.ph)*0.4,1);f.mesh.position.x=f.x+Math.sin(ft*7+f.ph)*0.03;f.mesh.material.color.setHSL(f.hue+Math.sin(ft*9+f.ph)*0.018,1,0.56+Math.sin(ft*12.3+f.ph)*0.09);}}
  if(B){const t=now/1000;
   for(const u of B.units){if(!u.g3)continue;const g=u.g3;
-   const kk=Math.min(1,dt*9);g.grp.position.x+=(u.px-g.grp.position.x)*kk;g.grp.position.z+=(u.pz-g.grp.position.z)*kk;
+   g.age=(g.age||0)+dt;const kk=Math.min(1,dt*(g.age<0.9?2.6:9));g.grp.position.x+=(u.px-g.grp.position.x)*kk;g.grp.position.z+=(u.pz-g.grp.position.z)*kk;
    let da=u.faceA-g.grp.rotation.y;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;g.grp.rotation.y+=da*Math.min(1,dt*10);
    g.hopY=(g.hopY||0)*Math.max(0,1-dt*7);g.lungeZ=(g.lungeZ||0)*Math.max(0,1-dt*7);
    if(!g.dead){g.bob.position.y=Math.sin(t*2.2+g.phase)*(g.fly?0.13:0.05)+(g.hopY||0);}
