@@ -811,7 +811,7 @@ let B=null,btTimer=null;
 const ALLY_POS=[{x:27,y:35},{x:27,y:65},{x:11,y:18},{x:11,y:50},{x:11,y:82}];
 const FOE_POS=[{x:73,y:35},{x:73,y:65},{x:89,y:18},{x:89,y:50},{x:89,y:82}];
 let unitSeq=1;
-const HOME_POS={ally:[{x:-1.33,z:1.29},{x:0.31,z:2.25},{x:-3.17,z:3.46},{x:-1.92,z:4.19},{x:-0.89,z:4.8}],foe:[{x:1.33,z:-1.29},{x:-0.31,z:-2.25},{x:3.17,z:-3.46},{x:1.92,z:-4.19},{x:0.89,z:-4.8}]};
+const HOME_POS={ally:[{x:-3.5,z:1.35},{x:0.3,z:1.35},{x:-4.2,z:3.25},{x:-1.6,z:3.25},{x:1.0,z:3.25}],foe:[{x:3.5,z:-1.35},{x:-0.3,z:-1.35},{x:4.2,z:-3.25},{x:1.6,z:-3.25},{x:-1.0,z:-3.25}]};
 function unitRange(u){
  const basic=u.def.basic||{};
  if(basic.type==='heal')return 99;
@@ -1327,8 +1327,8 @@ function bt3dInit(bg){
  const scene=new THREE.Scene();
  const asp=(st.clientWidth||360)/(st.clientHeight||480);const distF=asp<0.75?Math.pow(0.75/Math.max(0.45,asp),0.9):1;
  scene.fog=new THREE.Fog(bg==='grave'?0x23233a:bg==='cave'?0x2a140f:0x2c4630,18*distF,46*distF);
- const camera=new THREE.PerspectiveCamera(60,(st.clientWidth||360)/(st.clientHeight||480),0.1,120);
- camera.position.set(0,14.5*distF,11.0*distF);camera.lookAt(0,0,0.2);
+ const camera=new THREE.PerspectiveCamera(57,(st.clientWidth||360)/(st.clientHeight||480),0.1,120);
+ camera.position.set(0,11.0*distF,12.5*distF);camera.lookAt(0,0,0.2);
  scene.add(new THREE.HemisphereLight(0xcfe8ff,0x33241a,0.95));
  const dl=new THREE.DirectionalLight(0xfff1d6,0.9);dl.position.set(4,9,5);dl.castShadow=true;
  dl.shadow.mapSize.set(1024,1024);dl.shadow.camera.left=-7;dl.shadow.camera.right=7;dl.shadow.camera.top=7;dl.shadow.camera.bottom=-7;scene.add(dl);
@@ -1339,12 +1339,12 @@ function bt3dInit(bg){
  ring.rotation.x=-Math.PI/2;ring.position.y=0.01;scene.add(ring);
  const decoM=new THREE.MeshLambertMaterial({color:bg==='grave'?0x4c4c66:bg==='cave'?0x5e3a28:0x3c6034});
  const roadGrp=new THREE.Group();roadGrp.rotation.y=1.158;scene.add(roadGrp);
- const road=new THREE.Mesh(new THREE.BoxGeometry(14.5,0.05,3.6),new THREE.MeshLambertMaterial({color:bg==='grave'?0x55556e:bg==='cave'?0x6e4a34:0x9a8a72}));
+ const road=new THREE.Mesh(new THREE.BoxGeometry(14.5,0.05,4.4),new THREE.MeshLambertMaterial({color:bg==='grave'?0x55556e:bg==='cave'?0x6e4a34:0x9a8a72}));
  road.position.y=0.025;road.receiveShadow=true;roadGrp.add(road);
  const edgeM=new THREE.MeshLambertMaterial({color:bg==='grave'?0x3d3d52:bg==='cave'?0x54382a:0x77694f});
- [-1.78,1.78].forEach(z=>{const e=new THREE.Mesh(new THREE.BoxGeometry(14.5,0.07,0.16),edgeM);e.position.set(0,0.035,z);roadGrp.add(e);});
+ [-2.28,2.28].forEach(z=>{const e=new THREE.Mesh(new THREE.BoxGeometry(14.5,0.07,0.16),edgeM);e.position.set(0,0.035,z);roadGrp.add(e);});
  const cobM=new THREE.MeshLambertMaterial({color:bg==='grave'?0x62627e:bg==='cave'?0x7d5840:0xa99a7e});
- for(let ci=0;ci<16;ci++){const cb=new THREE.Mesh(new THREE.CircleGeometry(0.24+((ci*17)%10)/28,7),cobM);cb.rotation.x=-Math.PI/2;cb.position.set(((ci*53)%13)-6.5,0.056,((ci*37)%30)/10-1.5);roadGrp.add(cb);}
+ for(let ci=0;ci<16;ci++){const cb=new THREE.Mesh(new THREE.CircleGeometry(0.24+((ci*17)%10)/28,7),cobM);cb.rotation.x=-Math.PI/2;cb.position.set(((ci*53)%13)-6.5,0.056,((ci*37)%38)/10-1.9);roadGrp.add(cb);}
  const perpA=(x,z)=>Math.abs(-0.916*x-0.40*z);
  function treeAt(x,z,s){const g=new THREE.Group();
   if(bg==='cave'){const c=new THREE.Mesh(new THREE.ConeGeometry(0.22*s,1.1*s,5),new THREE.MeshLambertMaterial({color:0xff8a3c,emissive:0x903c00}));c.position.y=0.55*s;c.castShadow=true;g.add(c);}
@@ -1398,13 +1398,14 @@ function bt3dTween(dur,fn,end,ease){if(G3)G3.tweens.push({t:0,dur,fn,end,ease});
 function bt3dAddUnit(u){
  if(!G3)return;
  const model=u.isHero?buildHero3D(u.def):buildMonster3D(u.def.art);
+ model.scale.multiplyScalar(1.35);
  const grp=new THREE.Group(),spin=new THREE.Group(),bob=new THREE.Group();
  grp.add(spin);spin.add(bob);bob.add(model);
- const pos={x:u.px,z:u.pz};const baseY=model.userData.fly||0;
+ const pos={x:u.px,z:u.pz};const baseY=(model.userData.fly||0)*1.35;
  grp.position.set(pos.x,baseY-1.5,pos.z);grp.rotation.y=u.faceA;
  G3.scene.add(grp);
  const mats=[];model.traverse(m=>{if(m.isMesh){m.castShadow=true;if(!mats.includes(m.material))mats.push(m.material);}});
- u.g3={grp,spin,bob,mats,phase:Math.random()*6.28,bx:pos.x,bz:pos.z,baseY,head:model.userData.head||1.4,fly:model.userData.fly||0,dead:false};
+ u.g3={grp,spin,bob,mats,phase:Math.random()*6.28,bx:pos.x,bz:pos.z,baseY,head:(model.userData.head||1.4)*1.35,fly:(model.userData.fly||0)*1.35,dead:false};
  bt3dTween(0.45,k=>{grp.position.y=baseY-1.5+1.5*(1-Math.pow(1-k,2));});
 }
 function bt3dRemoveUnit(u){if(G3&&u.g3){G3.scene.remove(u.g3.grp);u.g3=null;}}
