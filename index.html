@@ -1397,6 +1397,11 @@ function bt3dInit(bg){
  renderer.domElement.className='g3cv';st.insertBefore(renderer.domElement,st.firstChild);
  const scene=new THREE.Scene();
  const asp=(st.clientWidth||360)/(st.clientHeight||480);const distF=asp<0.75?Math.pow(0.75/Math.max(0.45,asp),0.9):1;
+ try{const sc=document.createElement('canvas');sc.width=4;sc.height=256;const sg=sc.getContext('2d');const gr=sg.createLinearGradient(0,0,0,256);
+  if(bg==='grave'){gr.addColorStop(0,'#141428');gr.addColorStop(0.55,'#2c2c4e');gr.addColorStop(1,'#4a3a5e');}
+  else if(bg==='cave'){gr.addColorStop(0,'#160a08');gr.addColorStop(0.55,'#33150c');gr.addColorStop(1,'#5e2410');}
+  else{gr.addColorStop(0,'#1d3350');gr.addColorStop(0.55,'#3a5f7a');gr.addColorStop(1,'#7a8a5e');}
+  sg.fillStyle=gr;sg.fillRect(0,0,4,256);scene.background=new THREE.CanvasTexture(sc);}catch(e){}
  scene.fog=new THREE.Fog(bg==='grave'?0x23233a:bg==='cave'?0x2a140f:0x2c4630,18*distF,46*distF);
  const camera=new THREE.PerspectiveCamera(57,(st.clientWidth||360)/(st.clientHeight||480),0.1,120);
  camera.position.set(0,11.0*distF,12.5*distF);camera.lookAt(0,0,0.2);
@@ -1417,6 +1422,15 @@ function bt3dInit(bg){
  const cobM=new THREE.MeshLambertMaterial({color:bg==='grave'?0x62627e:bg==='cave'?0x7d5840:0xa99a7e});
  for(let ci=0;ci<16;ci++){const cb=new THREE.Mesh(new THREE.CircleGeometry(0.24+((ci*17)%10)/28,7),cobM);cb.rotation.x=-Math.PI/2;cb.position.set(((ci*53)%13)-6.5,0.056,((ci*37)%38)/10-1.9);roadGrp.add(cb);}
  const perpA=(x,z)=>Math.abs(-0.916*x-0.40*z);
+ const silM=new THREE.MeshLambertMaterial({color:bg==='grave'?0x1c1c30:bg==='cave'?0x200d08:0x22331f});
+ [[-11,-17,2.6],[-6.5,-19,3.8],[6,-18,3.2],[11,-16.5,2.2],[0,-20,4.6]].forEach(sp=>{const bx=sp[0],bz=sp[1],bh=sp[2];const b=new THREE.Mesh(new THREE.BoxGeometry(1.5+((Math.abs(bx)*7)%3)*0.5,bh,1.2),silM);b.position.set(bx,bh/2,bz);scene.add(b);});
+ const embM=new THREE.MeshBasicMaterial({color:0xffd76a,transparent:true,opacity:0.15,side:THREE.DoubleSide,fog:false});
+ const emb=new THREE.Mesh(new THREE.RingGeometry(1.5,1.62,40),embM);emb.rotation.x=-Math.PI/2;emb.position.y=0.065;scene.add(emb);
+ const emb2=new THREE.Mesh(new THREE.RingGeometry(0.9,0.97,32),embM);emb2.rotation.x=-Math.PI/2;emb2.position.y=0.065;scene.add(emb2);
+ if(bg!=='cave'){for(let ti=0;ti<4;ti++){const tx2=(ti%2?8.6:-8.6),tz2=-4+ti*2.6;if(perpA(tx2,tz2)<3.4)continue;
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,1.1,6),new THREE.MeshLambertMaterial({color:0x4a3826}));pole.position.set(tx2,0.55,tz2);scene.add(pole);
+  const fl=new THREE.Mesh(new THREE.ConeGeometry(0.16,0.42,7),new THREE.MeshBasicMaterial({color:bg==='grave'?0x7ad8ff:0xffa63d,transparent:true,opacity:0.92,fog:false}));fl.position.set(tx2,1.32,tz2);scene.add(fl);
+  const flick=()=>{if(!G3)return;bt3dTween(0.9+Math.random()*0.7,k=>{fl.scale.set(1+Math.sin(k*21+ti*2)*0.13,1+Math.sin(k*16+ti)*0.2,1);},flick);};setTimeout(flick,ti*300);}}
  function treeAt(x,z,s){const g=new THREE.Group();
   if(bg==='cave'){const c=new THREE.Mesh(new THREE.ConeGeometry(0.22*s,1.1*s,5),new THREE.MeshLambertMaterial({color:0xff8a3c,emissive:0x903c00}));c.position.y=0.55*s;c.castShadow=true;g.add(c);}
   else if(bg==='grave'){const tm=new THREE.MeshLambertMaterial({color:0x3a3444});const t=new THREE.Mesh(new THREE.CylinderGeometry(0.05*s,0.09*s,1.1*s,6),tm);t.position.y=0.55*s;t.rotation.z=0.12;t.castShadow=true;g.add(t);
