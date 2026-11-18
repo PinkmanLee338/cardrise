@@ -709,7 +709,7 @@ const FOE_POS=[{x:73,y:35},{x:73,y:65},{x:89,y:18},{x:89,y:50},{x:89,y:82}];
 let unitSeq=1;
 function mkUnit(side,def,lvl,stats,slot,isHero,star){
  const u={uid:unitSeq++,side,def,name:def.name,lvl,slot,row:slot<2?'front':'back',isHero:!!isHero,star:star||1,
-  maxhp:stats.hp,hp:stats.hp,atk:stats.atk,def:stats.def,spd:stats.spd,crit:stats.crit,
+  maxhp:stats.hp,hp:stats.hp,atk:stats.atk,defense:stats.def,spd:stats.spd,crit:stats.crit,
   energy:irnd(5,20),alive:true,atkCd:rnd(0.4,1.1),stun:0,slowT:0,slowAmt:0,shield:0,tauntT:0,dots:[],hots:[],buffAtkPct:0,ultCd:0};
  return u;
 }
@@ -730,7 +730,7 @@ function foeHeroUnit(hid,lvl,star,slot){
 function applyAuras(units){
  const allies=units.filter(u=>u.side==='ally');
  const has=k=>allies.some(u=>u.isHero&&u.star>=3&&u.def.passive&&u.def.passive.key===k);
- if(has('auraDef'))allies.forEach(u=>u.def=Math.round(u.def*1.12));
+ if(has('auraDef'))allies.forEach(u=>u.defense=Math.round(u.defense*1.12));
  if(has('auraAtk'))allies.forEach(u=>u.atk=Math.round(u.atk*1.10));
  if(has('auraHp'))allies.forEach(u=>{u.maxhp=Math.round(u.maxhp*1.08);u.hp=u.maxhp;});
  allies.forEach(u=>{if(u.isHero&&u.star>=3&&u.def.passive&&u.def.passive.key==='catgrace')u.crit+=5;});
@@ -777,7 +777,8 @@ function dealDmg(src,tgt,mult,opt){
  if(!opt.dot&&Math.random()<(tgt.dodge||0)){floatDmg(tgt,'闪避','miss');return 0;}
  let crit=opt.forceCrit||Math.random()*100<(src.crit-(tgt.isHero&&tgt.star>=3&&tgt.def.passive&&tgt.def.passive.key==='anticrit'?src.crit*0.5:0));
  let raw=src.atk*(1+src.buffAtkPct)*mult*rnd(0.92,1.08);
- let dmg=raw*100/(100+tgt.def);
+ if(B&&B.time>150)raw*=1+(B.time-150)*0.03;/* 狂暴：久战增伤防僵局 */
+ let dmg=raw*100/(100+tgt.defense);
  if(tgt.isHero&&tgt.star>=3&&tgt.def.passive&&tgt.def.passive.key==='tanklow'&&tgt.hp/tgt.maxhp<0.3)dmg*=0.65;
  if(crit)dmg*=(src.isHero&&src.star>=3&&src.def.passive&&src.def.passive.key==='critdmg')?2:1.6;
  dmg=Math.max(1,Math.round(dmg));
@@ -856,13 +857,13 @@ function castUlt(u){
  B.units.forEach(refreshUnit);
 }
 function battleTick(){
- if(!B||B.over)return;const dt=0.1*B.speed;
+ if(!B||B.over)return;const dt=0.1*B.speed;B.time=(B.time||0)+dt;
  for(const u of B.units){
   if(!u.alive)continue;
   if(u.stun>0){u.stun-=dt;continue;}
   if(u.slowT>0)u.slowT-=dt;if(u.tauntT>0)u.tauntT-=dt;
   for(let i=u.dots.length-1;i>=0;i--){const d=u.dots[i];d.t-=dt;d.tick-=dt;
-   if(d.tick<=0){d.tick=1;const dmg=Math.max(1,Math.round(d.amt*100/(100+u.def)));u.hp-=dmg;floatDmg(u,'毒 -'+dmg,'hurt');if(u.hp<=0){killUnit(d.src,u);} }
+   if(d.tick<=0){d.tick=1;const dmg=Math.max(1,Math.round(d.amt*100/(100+u.defense)));u.hp-=dmg;floatDmg(u,'毒 -'+dmg,'hurt');if(u.hp<=0){killUnit(d.src,u);} }
    if(d.t<=0||!u.alive)u.dots.splice(i,1);}
   if(!u.alive)continue;
   for(let i=u.hots.length-1;i>=0;i--){const h=u.hots[i];h.t-=dt;h.tick-=dt;
