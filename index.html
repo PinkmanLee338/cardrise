@@ -962,6 +962,7 @@ function battleTick(){
    if(h.t<=0)u.hots.splice(i,1);}
   const spdF=u.spd*(u.slowT>0?1-u.slowAmt:1);
   u.atkCd-=dt*spdF;
+  if(B.time<0.9){syncUnitPos(u);refreshUnit(u);continue;}
   if(u.stun>0){u.stun-=dt;syncUnitPos(u);refreshUnit(u);continue;}
   if(u.ultWindup>0){u.ultWindup-=dt;
    if(u.ultWindup<=0){if(u.el)u.el.classList.remove('charging');if(G3)bt3dChargeEnd(u);castUlt(u);if(B.over)return;}
@@ -980,7 +981,7 @@ function battleTick(){
    const t=u.curTgt;
    if(t){
     if(dist2d(u,t)>u.range){
-     const ang=Math.atan2(u.pz-t.pz,u.px-t.px)+(u.slot-2)*0.32;
+     const ang=Math.atan2(u.pz-t.pz,u.px-t.px)+(u.slot-2)*0.45;
      moveToward(u,t.px+Math.cos(ang)*u.range*0.92,t.pz+Math.sin(ang)*u.range*0.92,2.7*dt*(u.slowT>0?1-u.slowAmt:1));
     }else{
      u.faceA=Math.atan2(t.px-u.px,t.pz-u.pz);
@@ -991,6 +992,10 @@ function battleTick(){
   if(u.energy>=100&&u.def.ult&&u.windup<=0&&u.ultWindup<=0&&(B.autoUlt||u.side==='foe')){u.ultWindup=0.5;if(G3)bt3dCharge(u);if(u.el)u.el.classList.add('charging');}
   syncUnitPos(u);refreshUnit(u);
  }
+ for(let i=0;i<B.units.length;i++){const a=B.units[i];if(!a.alive)continue;
+  for(let j=i+1;j<B.units.length;j++){const b=B.units[j];if(!b.alive)continue;
+   const dx=b.px-a.px,dz=b.pz-a.pz;const d2=dx*dx+dz*dz;
+   if(d2>0.0001&&d2<0.36){const d=Math.sqrt(d2),push=(0.6-d)*0.5/d;a.px-=dx*push;a.pz-=dz*push;b.px+=dx*push;b.pz+=dz*push;}}}
 }
 function startWindup(u,fn){u.windup=u.melee?0.3:0.38;u.pendingAtk=fn;if(G3)bt3dWindup(u);if(u.el)u.el.classList.add('windup');}
 function executeBasic(u,t){
