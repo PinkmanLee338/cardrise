@@ -1481,18 +1481,18 @@ function makeGroundTexture(bg){
 }
 function bt3dSlashFx(tgt,crit){
  if(!tgt.g3||!G3)return;const g=new THREE.Group();
- const m=new THREE.Mesh(new THREE.RingGeometry(0.30,0.52,14,1,0,Math.PI*0.95),new THREE.MeshBasicMaterial({color:crit?0xffd100:0xeaf4ff,transparent:true,opacity:0.95,side:THREE.DoubleSide,depthWrite:false,fog:false}));
+ const m=new THREE.Mesh(new THREE.RingGeometry(0.36,0.68,14,1,0,Math.PI*0.95),new THREE.MeshBasicMaterial({color:crit?0xffd100:0xffffff,transparent:true,opacity:1,side:THREE.DoubleSide,depthWrite:false,fog:false}));
  m.rotation.z=Math.random()*Math.PI*2;g.add(m);g.position.set(tgt.px,1.15,tgt.pz);
  if(G3.camera)g.lookAt(G3.camera.position.x,1.15,G3.camera.position.z);
  G3.scene.add(g);
- bt3dTween(0.16,k=>{const s=1+k*0.7;g.scale.set(s,s,s);m.material.opacity=0.95*(1-k);},()=>{G3.scene.remove(g);});
+ bt3dTween(0.28,k=>{const s=1+k*0.6;g.scale.set(s,s,s);m.material.opacity=1-k;},()=>{G3.scene.remove(g);});
 }
 function bt3dSparks(tgt,color){
  if(!tgt.g3||!G3)return;
- for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.05,0.05),new THREE.MeshBasicMaterial({color:color,transparent:true,fog:false}));
+ for(let i=0;i<7;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.08),new THREE.MeshBasicMaterial({color:color,transparent:true,fog:false}));
   m.position.set(tgt.px,1.0,tgt.pz);G3.scene.add(m);
-  const a=Math.random()*Math.PI*2,v=1.2+Math.random()*1.6,vy=1.5+Math.random()*1.5,sx=tgt.px,sz=tgt.pz;
-  bt3dTween(0.32,k=>{m.position.set(sx+Math.cos(a)*v*k*0.55,1.0+vy*k-2.6*k*k,sz+Math.sin(a)*v*k*0.55);m.material.opacity=1-k;},()=>{G3.scene.remove(m);});}
+  const a=Math.random()*Math.PI*2,v=1.4+Math.random()*1.8,vy=1.7+Math.random()*1.6,sx=tgt.px,sz=tgt.pz;
+  bt3dTween(0.45,k=>{m.position.set(sx+Math.cos(a)*v*k*0.55,1.0+vy*k-2.6*k*k,sz+Math.sin(a)*v*k*0.55);m.material.opacity=1-k;},()=>{G3.scene.remove(m);});}
 }
 function bt3dTween(dur,fn,end,ease){if(G3)G3.tweens.push({t:0,dur,fn,end,ease});}
 function bt3dAddUnit(u){
