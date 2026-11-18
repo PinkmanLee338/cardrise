@@ -907,7 +907,7 @@ function pickTarget(u,mode){
 }
 function pickHealTarget(u){const al=alliesOf(u);return al.reduce((a,b)=>a.hp/a.maxhp<=b.hp/b.maxhp?a:b);}
 function dealDmg(src,tgt,mult,opt){
- opt=opt||{};if(!tgt||!tgt.alive||!src.alive)return 0;
+ opt=opt||{};if(!tgt||!tgt.alive||(!src.alive&&!opt.ultLand))return 0;
  if(!opt.dot&&Math.random()<(tgt.dodge||0)){floatDmg(tgt,'闪避','miss');return 0;}
  let crit=opt.forceCrit||Math.random()*100<(src.crit-(tgt.isHero&&tgt.star>=3&&tgt.def.passive&&tgt.def.passive.key==='anticrit'?src.crit*0.5:0));
  let raw=src.atk*(1+src.buffAtkPct)*mult*rnd(0.92,1.08);
@@ -1021,6 +1021,8 @@ function rangedOrMelee(u,t,hitFn){
  if(ranged){fxProj(u,t,u.side==='ally'?'#ffd76a':'#ff8a7a');setTimeout(()=>{if(u.alive)hitFn();},B.fast?0:170);}
  else{lunge(u);setTimeout(()=>{if(u.alive)hitFn();},B.fast?0:110);}
 }
+let ULT_DOPT=null;
+const TELE_ULT={aoe:{c:'#ff9d45',r:2.3},aoeStun:{c:'#ffe14d',r:2.3},aoeSlow:{c:'#7ad8ff',r:2.3},frontAoe:{c:'#ff7a2a',r:1.9},dotAll:{c:'#b07dff',r:2.3}};
 function castUlt(u){
  if(!u.alive||u.energy<100)return;const ult=u.def.ult;if(!ult)return;
  u.energy=0;u.ultWindup=0;if(u.el)u.el.classList.remove('charging');if(G3)bt3dChargeEnd(u);refreshUnit(u);SFX.ult();
@@ -1030,17 +1032,17 @@ function castUlt(u){
   const cv=$('ultCv');if(u.isHero)drawChibi(cv,u.def);else drawMonster(cv,u.def.art);
   bn.style.display='flex';setTimeout(()=>bn.style.display='none',820/B.speed);}
  btLogFn('✦ '+u.name+' 释放【'+ult.name+'】');
- const A=u.atk;
+ const runUltDamage=()=>{const A=u.atk;
  switch(ult.type){
-  case 'aoe':foesOf(u).forEach(f=>dealDmg(u,f,ult.mult));break;
-  case 'aoeStun':foesOf(u).forEach(f=>{dealDmg(u,f,ult.mult);if(f.alive)f.stun=Math.max(f.stun,ult.stun);});break;
-  case 'aoeSlow':foesOf(u).forEach(f=>{dealDmg(u,f,ult.mult);f.slowT=3;f.slowAmt=ult.slow;});break;
-  case 'frontAoe':{const fs=foesOf(u).filter(f=>f.row==='front');(fs.length?fs:foesOf(u)).forEach(f=>dealDmg(u,f,ult.mult));break;}
+  case 'aoe':foesOf(u).forEach(f=>dealDmg(u,f,ult.mult,ULT_DOPT));break;
+  case 'aoeStun':foesOf(u).forEach(f=>{dealDmg(u,f,ult.mult,ULT_DOPT);if(f.alive)f.stun=Math.max(f.stun,ult.stun);});break;
+  case 'aoeSlow':foesOf(u).forEach(f=>{dealDmg(u,f,ult.mult,ULT_DOPT);f.slowT=3;f.slowAmt=ult.slow;});break;
+  case 'frontAoe':{const fs=foesOf(u).filter(f=>f.row==='front');(fs.length?fs:foesOf(u)).forEach(f=>dealDmg(u,f,ult.mult,ULT_DOPT));break;}
   case 'snipe':{const t=pickTarget(u,'lowhp');if(t)dealDmg(u,t,ult.mult);break;}
   case 'backstab':{const t=pickTarget(u,'back');if(t)dealDmg(u,t,ult.mult,{forceCrit:true});break;}
   case 'multiShot':{const fs=[...foesOf(u)].sort(()=>Math.random()-0.5).slice(0,ult.count||3);fs.forEach(f=>dealDmg(u,f,ult.mult));break;}
   case 'flurry':{for(let i=0;i<(ult.hits||4);i++){const t=pickTarget(u,'front');if(t)setTimeout(((tt,ii)=>()=>{if(u.alive&&tt.alive)dealDmg(u,tt,ult.mult);})(t,i),i*120);}break;}
-  case 'dotAll':foesOf(u).forEach(f=>{dealDmg(u,f,ult.mult);f.dots.push({t:ult.dotTicks,tick:0,amt:Math.round(A*ult.dotMult),src:u});});break;
+  case 'dotAll':foesOf(u).forEach(f=>{dealDmg(u,f,ult.mult,ULT_DOPT);f.dots.push({t:ult.dotTicks,tick:0,amt:Math.round(A*ult.dotMult),src:u});});break;
   case 'healAll':alliesOf(u).forEach(a=>doHeal(u,a,Math.round(A*ult.mult)));SFX.heal();break;
   case 'hotAll':alliesOf(u).forEach(a=>a.hots.push({t:ult.hotTicks,tick:0,amt:Math.round(A*ult.mult),src:u}));SFX.heal();break;
   case 'shieldHeal':alliesOf(u).forEach(a=>{a.shield+=Math.round(A*ult.shield);doHeal(u,a,Math.round(A*ult.heal));refreshUnit(a);});break;
@@ -1049,7 +1051,15 @@ function castUlt(u){
    if(dead.length){const t=dead[0];t.alive=true;t.hp=Math.round(t.maxhp*0.5);t.energy=30;if(G3)bt3dRevive(t);btLogFn('✨ '+t.name+' 被复活了！');refreshUnit(t);}
    else alliesOf(u).forEach(a=>doHeal(u,a,Math.round(A*ult.mult)));SFX.heal();break;}
  }
- if(G3&&!B.fast)bt3dUltEffect(u,ult);
+ };
+ const tele=TELE_ULT[ult.type];
+ if(tele&&G3&&!B.fast){const tgts=ult.type==='frontAoe'?(()=>{const fs=foesOf(u).filter(f=>f.row==='front');return fs.length?fs:foesOf(u);})():foesOf(u);
+  if(tgts.length){const cx=tgts.reduce((s,x)=>s+x.px,0)/tgts.length,cz=tgts.reduce((s,x)=>s+x.pz,0)/tgts.length;
+   bt3dTelegraph(cx,cz,tele.r,tele.c);bt3dSkillRain(ult.type,cx,cz,tele.r);
+   setTimeout(()=>{if(B&&!B.over){ULT_DOPT={ultLand:true};runUltDamage();ULT_DOPT=null;bt3dRing(cx,cz,tele.c,0.4,tele.r);bt3dBurst(cx,cz,tele.c,8);}},560);
+  }else runUltDamage();
+ }else runUltDamage();
+ if(G3&&!B.fast&&!tele)bt3dUltEffect(u,ult);
  B.units.forEach(refreshUnit);
 }
 
@@ -1375,6 +1385,30 @@ function bt3dCharge(u){}
 function bt3dChargeEnd(u){if(u.g3)u.g3.mats.forEach(m=>m.emissive.setHex(m.userData.e0||0));}
 function bt3dRing(cx,cz,color,dur,maxR){const m=new THREE.Mesh(new THREE.RingGeometry(0.42,0.55,36),new THREE.MeshBasicMaterial({color:new THREE.Color(color),transparent:true,opacity:0.85,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.set(cx,0.06,cz);G3.scene.add(m);bt3dTween(dur||0.45,k=>{const s=0.6+(maxR||2.1)*k;m.scale.set(s,s,s);m.material.opacity=0.85*(1-k);},()=>{G3.scene.remove(m);});}
 function bt3dBurst(cx,cz,color,n){for(let i=0;i<(n||7);i++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,6),new THREE.MeshBasicMaterial({color:new THREE.Color(color),transparent:true}));const a=Math.random()*6.28,r=0.25+Math.random()*0.5;m.position.set(cx+Math.cos(a)*r,0.5,cz+Math.sin(a)*r);G3.scene.add(m);const vy=1+Math.random()*1.2;bt3dTween(0.55,k=>{m.position.y=0.5+vy*k;m.material.opacity=1-k;},()=>{G3.scene.remove(m);});}}
+function bt3dTelegraph(cx,cz,r,colorHex){
+ const disc=new THREE.Mesh(new THREE.CircleGeometry(r,36),new THREE.MeshBasicMaterial({color:new THREE.Color(colorHex),transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
+ disc.rotation.x=-Math.PI/2;disc.position.set(cx,0.05,cz);G3.scene.add(disc);
+ const ring=new THREE.Mesh(new THREE.RingGeometry(r-0.09,r,40),new THREE.MeshBasicMaterial({color:new THREE.Color(colorHex),transparent:true,opacity:0.9,side:THREE.DoubleSide,depthWrite:false}));
+ ring.rotation.x=-Math.PI/2;ring.position.set(cx,0.06,cz);G3.scene.add(ring);
+ bt3dTween(0.56,k=>{disc.material.opacity=0.26*Math.min(1,k*2.2);const p=1+0.04*Math.sin(k*22);ring.scale.set(p,p,p);},()=>{G3.scene.remove(disc);G3.scene.remove(ring);});
+}
+function bt3dRainDrop(geo,colorHex,cx,cz,r,H,dur,delay,flip){
+ const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:new THREE.Color(colorHex),transparent:true}));
+ if(flip)m.rotation.x=Math.PI;
+ const a=Math.random()*6.28,rr=Math.sqrt(Math.random())*r;
+ m.position.set(cx+Math.cos(a)*rr,H,cz+Math.sin(a)*rr);G3.scene.add(m);
+ bt3dTween(dur,k=>{const kk=delay>=1?k:clamp((k-delay)/(1-delay),0,1);m.position.y=H*(1-kk*kk);m.material.opacity=kk>=1?0:1;},()=>{G3.scene.remove(m);});
+}
+function bt3dSkillRain(type,cx,cz,r){
+ if(type==='aoeSlow'){for(let i=0;i<30;i++)bt3dRainDrop(new THREE.ConeGeometry(0.05,0.24,5),pick(['#dff4ff','#aee6ff','#ffffff']),cx,cz,r,4.8,0.62,Math.random()*0.45,1);}
+ else if(type==='aoe'){for(let i=0;i<10;i++)bt3dRainDrop(new THREE.SphereGeometry(0.11,8,6),pick(['#ffb62e','#ff9d45','#ff7a2a']),cx,cz,r,5.0,0.5,Math.random()*0.3);}
+ else if(type==='frontAoe'){for(let i=0;i<7;i++)bt3dRainDrop(new THREE.SphereGeometry(0.13,7,6),'#c9a186',cx,cz,r,4.4,0.52,Math.random()*0.3);}
+ else if(type==='dotAll'){for(let i=0;i<22;i++)bt3dRainDrop(new THREE.SphereGeometry(0.055,6,5),pick(['#b07dff','#8a5cff','#c07dff']),cx,cz,r,4.6,0.68,Math.random()*0.4);}
+ else if(type==='aoeStun'){for(let i=0;i<6;i++){const a=Math.random()*6.28,rr=Math.sqrt(Math.random())*r;
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.05,5.4,5),new THREE.MeshBasicMaterial({color:new THREE.Color('#fff6b0'),transparent:true,opacity:0}));
+  m.position.set(cx+Math.cos(a)*rr,2.7,cz+Math.sin(a)*rr);G3.scene.add(m);
+  setTimeout(()=>{bt3dTween(0.18,k=>{m.material.opacity=k<0.3?k/0.3:1-(k-0.3)/0.7;},()=>{G3.scene.remove(m);});},i*85);}}
+}
 function bt3dUltEffect(u,ult){
  const foes=foesOf(u),allies=alliesOf(u);
  const ctr=arr=>arr.length?{x:arr.reduce((s,x)=>s+x.px,0)/arr.length,z:arr.reduce((s,x)=>s+x.pz,0)/arr.length}:{x:u.px,z:u.pz};
