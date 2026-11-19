@@ -244,6 +244,10 @@ input{user-select:text;-webkit-user-select:text}
 .bbTrack{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
 #bossFill{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5a3c,#ff9d45);border-radius:5px;transition:width .18s}
 #bossHp{font-size:10.5px;color:#ffd9c9;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tslot.sel{border-color:#ffd100;border-style:solid;box-shadow:0 0 0 2px rgba(255,209,0,.45)}
+.hcard .hb{position:absolute;top:4px;right:4px;font-size:9.5px;font-weight:800;padding:1.5px 6px;border-radius:7px;z-index:2;color:#fff}
+.hcard .hb.up{background:#2fbf71}
+.hcard .hb.syn{background:#b678f0}
 .starPop{display:inline-block;animation:starIn .45s cubic-bezier(.2,2.2,.4,1) both}
 @keyframes starIn{0%{transform:scale(0) rotate(-40deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
 #btBtns{padding:9px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:9px;background:rgba(0,0,0,.4)}
@@ -572,7 +576,7 @@ function newSave(){
   guide:{summoned:false,battled:false},uidSeq:1};
 }
 function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
-function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};
+function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};S.teamArena=S.teamArena||null;
  if(TEST_MODE){S.gold=Math.max(S.gold,999999);S.gems=Math.max(S.gems,999999);S.stam=Math.max(S.stam,9999);S.potions.s=Math.max(S.potions.s,99);S.potions.m=Math.max(S.potions.m,99);}}
 function accXpNeed(l){return Math.round(60*Math.pow(l,1.5));}
 function stamMax(){return 120+S.accLvl*2;}
@@ -598,7 +602,8 @@ function gainHeroXp(id,amt){
  while(h.lvl<cap&&h.xp>=heroXpNeed(h.lvl)){h.xp-=heroXpNeed(h.lvl);h.lvl++;}
  if(h.lvl>=cap)h.xp=Math.min(h.xp,heroXpNeed(h.lvl)-1);
 }
-function teamPower(){let p=0;S.team.forEach(id=>{if(id)p+=heroStats(id).power;});return p;}
+function teamPower(){return teamPowerOf(S.team);}
+function teamPowerOf(arr){let p=0;(arr||[]).forEach(id=>{if(id)p+=heroStats(id).power;});return p;}
 function dailyProg(key,amt){S.daily.prog[key]=(S.daily.prog[key]||0)+(amt||1);updateBadges();}
 /* ================= 任务/成就/签到 数据 ================= */
 const DAILIES=[
@@ -749,21 +754,30 @@ function doSweep(c,s,elite,n){
 }
 /* ================= 英雄页 ================= */
 let heroFilter='all';
+let heroSort='power';
+let teamCtx='main';
+function CT(){if(teamCtx==='arena'){if(!S.teamArena)S.teamArena=[...S.team];return S.teamArena;}return S.team;}
 function renderHeroes(){
  const el=$('scr-heroes');
- let html='<div class="secTitle">上阵阵容（前排 2 · 后排 3）</div><div class="teamSlots">';
- S.team.forEach((id,i)=>{
-  html+='<div class="tslot '+(id?'filled':'')+'" onclick="teamSlotTap('+i+')"><span class="rowTag">'+(i<2?'前排':'后排')+'</span>'+(id?'<canvas width="120" height="120" data-hero="'+id+'"></canvas><div style="font-size:10.5px;font-weight:800">'+HERO_MAP[id].name.split('·')[0]+' Lv.'+S.heroes[id].lvl+'</div>':'<div style="font-size:20px">＋</div><div>点击选择</div>')+'</div>';
+ let html='<div class="modeTabs" style="margin-bottom:9px"><button class="'+(teamCtx==='main'?'on':'')+'" onclick="teamCtx=\'main\';renderHeroes()">⚔️ 副本阵容</button><button class="'+(teamCtx==='arena'?'on':'')+'" onclick="teamCtx=\'arena\';renderHeroes()">🏟️ 竞技场阵容</button></div>';
+ html+='<div class="secTitle">'+(teamCtx==='arena'?'竞技场阵容':'上阵阵容')+'（前排 2 · 后排 3）· 战力 <span class="gold">'+fmtN(teamPowerOf(CT()))+'</span></div><div class="teamSlots">';
+ CT().forEach((id,i)=>{
+  html+='<div class="tslot '+(id?'filled':'')+(swapSlot===i?' sel':'')+'" onclick="teamSlotTap('+i+')"><span class="rowTag">'+(i<2?'前排':'后排')+'</span>'+(id?'<canvas width="120" height="120" data-hero="'+id+'"></canvas><div style="font-size:10.5px;font-weight:800">'+HERO_MAP[id].name.split('·')[0]+' Lv.'+S.heroes[id].lvl+'</div>':'<div style="font-size:20px">＋</div><div>点击选择</div>')+'</div>';
  });
- html+='</div><div class="dim" style="font-size:11.5px;margin-bottom:10px">点已上阵的槽位可卸下；点空槽位后在下方点英雄上阵。坦克与近战放前排，输出与治疗放后排。</div>';
+ html+='</div><div class="dim" style="font-size:11.5px;margin-bottom:8px">点已上阵的槽位选中它，再点另一个槽位交换站位，点自己卸下；点空槽位后在下方点英雄上阵。坦克与近战放前排，输出与治疗放后排。</div>';
+ html+='<button class="btn blue" style="width:100%;margin-bottom:12px" onclick="autoTeam()">✨ 一键推荐编队（按战力自动排前后排）</button>';
  html+='<div class="secTitle">英雄图鉴（'+Object.keys(S.heroes).length+' / '+HEROES.length+'）</div>';
- html+='<div class="modeTabs" style="margin-bottom:10px">'+[['all','全部'],['tank','坦克'],['dps','输出'],['heal','治疗']].map(f=>'<button class="'+(heroFilter===f[0]?'on':'')+'" onclick="heroFilter=\''+f[0]+'\';renderHeroes()">'+f[1]+'</button>').join('')+'</div>';
+ html+='<div class="modeTabs" style="margin-bottom:6px">'+[['all','全部'],['tank','坦克'],['dps','输出'],['heal','治疗']].map(f=>'<button class="'+(heroFilter===f[0]?'on':'')+'" onclick="heroFilter=\''+f[0]+'\';renderHeroes()">'+f[1]+'</button>').join('')+'</div>';
+ html+='<div class="modeTabs" style="margin-bottom:10px">'+[['power','战力排序'],['lvl','等级排序'],['rar','稀有度排序']].map(f=>'<button class="'+(heroSort===f[0]?'on':'')+'" onclick="heroSort=\''+f[0]+'\';renderHeroes()">'+f[1]+'</button>').join('')+'</div>';
  html+='<div class="heroGrid">';
- const sorted=[...HEROES].sort((a,b)=>{const oa=S.heroes[a.id]?0:1,ob=S.heroes[b.id]?0:1;if(oa!==ob)return oa-ob;return b.rarity-a.rarity||(S.heroes[b.id]?S.heroes[b.id].lvl:0)-(S.heroes[a.id]?S.heroes[a.id].lvl:0);});
+ const sorted=[...HEROES].sort((a,b)=>{const oa=S.heroes[a.id]?0:1,ob=S.heroes[b.id]?0:1;if(oa!==ob)return oa-ob;
+  if(heroSort==='lvl')return (S.heroes[b.id]?S.heroes[b.id].lvl:0)-(S.heroes[a.id]?S.heroes[a.id].lvl:0)||b.rarity-a.rarity;
+  if(heroSort==='rar')return b.rarity-a.rarity||(S.heroes[b.id]?S.heroes[b.id].lvl:0)-(S.heroes[a.id]?S.heroes[a.id].lvl:0);
+  return (S.heroes[b.id]?heroStats(b.id).power:0)-(S.heroes[a.id]?heroStats(a.id).power:0);});
  sorted.forEach(H=>{
   if(heroFilter!=='all'&&H.role!==heroFilter)return;
   const h=S.heroes[H.id];const owned=!!h;
-  html+='<div class="hcard r'+H.rarity+(owned?'':' notOwned')+'" onclick="openHero(\''+H.id+'\')">'+(owned&&S.team.includes(H.id)?'<span class="inTeam">出战</span>':'')+'<canvas width="160" height="160" data-hero="'+H.id+'"></canvas><div class="nm">'+H.name+'</div><div class="meta"><span>'+(owned?'Lv.'+h.lvl:'未获得')+'</span><span class="stars">'+(owned?'★'.repeat(h.star):'')+'</span></div>'+(owned&&h.star<5?'<div class="shardTag">碎片 '+h.shards+'/'+STAR_COST[h.star+1]+'</div>':(!owned&&(S.shardBank[H.id]||0)>0?'<div class="shardTag">碎片 '+S.shardBank[H.id]+'/20'+(S.shardBank[H.id]>=20?' 可合成！':'')+'</div>':''))+'</div>';
+  html+='<div class="hcard r'+H.rarity+(owned?'':' notOwned')+'" onclick="openHero(\''+H.id+'\')">'+(owned&&CT().includes(H.id)?'<span class="inTeam">出战</span>':'')+(owned&&h.star<5&&h.shards>=(STAR_COST[h.star+1]||9999)?'<span class="hb up">可升星↑</span>':(!owned&&(S.shardBank[H.id]||0)>=20?'<span class="hb syn">可合成✦</span>':''))+'<canvas width="160" height="160" data-hero="'+H.id+'"></canvas><div class="nm">'+H.name+'</div><div class="meta"><span>'+(owned?'Lv.'+h.lvl:'未获得')+'</span><span class="stars">'+(owned?'★'.repeat(h.star):'')+'</span></div>'+(owned&&h.star<5?'<div class="shardTag">碎片 '+h.shards+'/'+STAR_COST[h.star+1]+'</div>':(!owned&&(S.shardBank[H.id]||0)>0?'<div class="shardTag">碎片 '+S.shardBank[H.id]+'/20'+(S.shardBank[H.id]>=20?' 可合成！':'')+'</div>':''))+'</div>';
  });
  html+='</div>';
  html+='<div class="card" style="margin-top:12px"><div style="font-weight:900;margin-bottom:5px">🎒 道具背包</div><div style="font-size:13px;line-height:1.9">🧪 经验药水（小）×'+S.potions.s+'（+120 经验） · ⚗️ 经验药水（大）×'+S.potions.m+'（+500 经验）<br><span class="dim">在英雄详情页使用。装备 '+S.items.length+' 件，在英雄详情页穿戴，多余装备可出售。</span></div></div>';
@@ -771,52 +785,72 @@ function renderHeroes(){
  el.querySelectorAll('canvas[data-hero]').forEach(cv=>drawChibi(cv,HERO_MAP[cv.dataset.hero]));
 }
 let pickingSlot=-1;
+let swapSlot=-1;
 function teamSlotTap(i){
- if(S.team[i]){const id=S.team[i];S.team[i]=null;toast(HERO_MAP[id].name+' 已卸下');saveGame();renderHeroes();return;}
+ const T=CT();
+ if(swapSlot>=0&&swapSlot!==i){const a=T[swapSlot];T[swapSlot]=T[i];T[i]=a;swapSlot=-1;SFX.click();toast('已交换站位');saveGame();renderHeroes();return;}
+ if(swapSlot===i){swapSlot=-1;const id=T[i];T[i]=null;toast(HERO_MAP[id].name+' 已卸下');saveGame();renderHeroes();return;}
+ if(T[i]){swapSlot=i;toast('已选中 '+HERO_MAP[T[i]].name.split('·')[0]+'：点另一个槽位交换，点自己卸下');renderHeroes();return;}
  pickingSlot=i;toast('再点下方一名英雄上阵到 '+(i<2?'前排':'后排'));
 }
-function openHero(id){
+function autoTeam(){
+ const T=CT();const owned=Object.keys(S.heroes);if(!owned.length){toast('还没有英雄');return;}
+ const byP=[...owned].sort((a,b)=>heroStats(b).power-heroStats(a).power);
+ const front=byP.filter(id=>HERO_MAP[id].row==='front');const back=byP.filter(id=>HERO_MAP[id].row!=='front');
+ const pickF=front.slice(0,2),restF=front.slice(2),pickB=back.slice(0,3),restB=back.slice(3);
+ while(pickF.length<2&&(restB.length||restF.length))pickF.push((restB.length?restB:restF).shift());
+ while(pickB.length<3&&(restF.length||restB.length))pickB.push((restF.length?restF:restB).shift());
+ const nt=[pickF[0]||null,pickF[1]||null,pickB[0]||null,pickB[1]||null,pickB[2]||null];
+ for(let i=0;i<5;i++)T[i]=nt[i];
+ swapSlot=-1;SFX.click();toast('已按战力推荐编队 · 战力 '+fmtN(teamPowerOf(T)));saveGame();renderHeroes();
+}
+function openHero(id,tab){
  const H=HERO_MAP[id];const h=S.heroes[id];
  if(pickingSlot>=0&&h){const slot=pickingSlot;pickingSlot=-1;
-  const oldIdx=S.team.indexOf(id);if(oldIdx>=0)S.team[oldIdx]=null;
-  S.team[slot]=id;SFX.quest();toast(H.name+' 上阵！');saveGame();renderHeroes();return;}
+  const T=CT();const oldIdx=T.indexOf(id);if(oldIdx>=0)T[oldIdx]=null;
+  T[slot]=id;SFX.click();toast(H.name+' 上阵！');saveGame();renderHeroes();return;}
  if(!h){openModal('<h3>'+H.name+' <span class="x" onclick="closeModal()">✕</span></h3><div style="text-align:center"><canvas width="180" height="180" id="mhCv" style="border-radius:12px"></canvas></div><p style="line-height:1.8;font-size:13.5px;margin-top:8px"><span style="color:'+RAR_COLOR[H.rarity]+';font-weight:800">'+RAR_NAME[H.rarity]+'</span> · '+H.cls+' · '+(H.row==='front'?'前排':'后排')+'<br>「'+H.quote+'」<br>大招【'+H.ult.name+'】'+H.ult.desc+'<br>被动【'+H.passive.name+'】'+H.passive.desc+'（3 星解锁）<br><span class="dim">获取方式：召唤，或在精英副本收集碎片（20 碎片合成）</span><br>已收集碎片：<b class="gold">'+(S.shardBank[id]||0)+' / 20</b></p><div class="kvBtns">'+((S.shardBank[id]||0)>=20?'<button class="btn green" onclick="synthHero(\''+id+'\')">✨ 碎片合成英雄</button>':'')+'<button class="btn purple" onclick="closeModal();goScr(\'summon\')">去召唤</button></div>');
   drawChibi($('mhCv'),H);return;}
- const st=heroStats(id);const inTeam=S.team.includes(id);
+ const st=heroStats(id);const inTeam=CT().includes(id);tab=tab||'grow';
  let eqHtml='<div class="eqSlots">'+['weapon','armor','trinket'].map(slot=>{const uid=h.eq[slot];const it=uid?S.items.find(i=>i.uid===uid):null;
   return '<div class="eqSlot">'+SLOT_CN[slot]+'<br>'+(it?'<span class="ic">'+EQUIPS[it.itemId].icon+'</span><br>'+EQUIPS[it.itemId].name:'<span class="dim">（空）</span>')+'</div>';}).join('')+'</div>';
  const myItems=S.items.filter(it=>!Object.values(h.eq).includes(it.uid));
- openModal('<h3>'+H.name+' <span class="x" onclick="closeModal()">✕</span></h3>'
+ const head='<h3>'+H.name+' <span class="x" onclick="closeModal()">✕</span></h3>'
  +'<div style="display:flex;gap:12px"><canvas width="150" height="150" id="mhCv" style="border-radius:12px;flex:none"></canvas><div style="flex:1;font-size:13px;line-height:1.5"><div><span style="color:'+RAR_COLOR[H.rarity]+';font-weight:800">'+RAR_NAME[H.rarity]+'</span> · '+H.title+'</div><div class="gold" style="font-size:15px">'+'★'.repeat(h.star)+'<span class="dim">'+'★'.repeat(5-h.star)+'</span></div><div>Lv.'+h.lvl+' · 战力 <b class="gold">'+st.power+'</b></div><div class="dim">经验 '+Math.floor(h.xp)+' / '+heroXpNeed(h.lvl)+'</div><div class="progBar"><i style="width:'+clamp(h.xp/heroXpNeed(h.lvl)*100,0,100)+'%"></i></div><div style="margin-top:4px">「'+H.quote+'」</div></div></div>'
- +'<div style="margin-top:6px"><div class="statRow"><span>❤️ 生命</span><b>'+st.hp+'</b></div><div class="statRow"><span>⚔️ 攻击</span><b>'+st.atk+'</b></div><div class="statRow"><span>🛡️ 防御</span><b>'+st.def+'</b></div><div class="statRow"><span>💨 速度 / 暴击</span><b>'+st.spd.toFixed(2)+' / '+st.crit+'%</b></div></div>'
- +'<p style="font-size:12.5px;line-height:1.7;margin-top:8px">大招【'+H.ult.name+'】'+H.ult.desc+'<br>被动【'+H.passive.name+'】'+H.passive.desc+(h.star>=3?' <span class="grn">（已激活）</span>':' <span class="dim">（3 星激活）</span>')+'</p>'
- +eqHtml
- +'<div class="kvBtns">'
- +(S.potions.s>0?'<button class="btn sm green" onclick="usePotion(\''+id+'\',\'s\')">药水(小) ×'+S.potions.s+'</button>':'')
- +(S.potions.m>0?'<button class="btn sm green" onclick="usePotion(\''+id+'\',\'m\')">药水(大) ×'+S.potions.m+'</button>':'')
- +(h.star<5?'<button class="btn sm purple" onclick="starUp(\''+id+'\')">升星（碎片 '+h.shards+'/'+STAR_COST[h.star+1]+'）</button>':'<button class="btn sm gray" disabled>已满星</button>')
- +'</div>'
- +(myItems.length?'<div style="margin-top:10px;font-size:13px;font-weight:800">可穿戴装备（点击穿戴）</div>'+myItems.map(it=>{const E=EQUIPS[it.itemId];return '<div class="rowItem"><span style="font-size:19px">'+E.icon+'</span><div class="grow"><div class="t" style="font-size:13.5px">'+E.name+' <span class="dim">'+SLOT_CN[E.slot]+'</span></div><div class="d">'+(E.atk?'攻击 +'+E.atk+' ':'')+(E.hp?'生命 +'+E.hp+' ':'')+(E.def?'防御 +'+E.def:'')+'</div></div><button class="btn sm blue" onclick="equipItem(\''+id+'\','+it.uid+')">穿戴</button><button class="btn sm gray" onclick="sellItem('+it.uid+',\''+id+'\')">出售 150</button></div>';}).join(''):'')
- +'<div class="kvBtns"><button class="btn gray" onclick="closeModal()">关闭</button>'+(inTeam?'':'<button class="btn" onclick="quickTeam(\''+id+'\')">上阵</button>')+'</div>');
+ +'<div class="modeTabs" style="margin:10px 0 2px">'+[['grow','🧪 养成'],['gear','🛡️ 装备'],['info','📖 资料']].map(t=>'<button class="'+(tab===t[0]?'on':'')+'" onclick="openHero(\''+id+'\',\''+t[0]+'\')">'+t[1]+'</button>').join('')+'</div>';
+ let body='';
+ if(tab==='grow'){
+  body='<div style="margin-top:6px"><div class="statRow"><span>❤️ 生命</span><b>'+st.hp+'</b></div><div class="statRow"><span>⚔️ 攻击</span><b>'+st.atk+'</b></div><div class="statRow"><span>🛡️ 防御</span><b>'+st.def+'</b></div><div class="statRow"><span>💨 速度 / 暴击</span><b>'+st.spd.toFixed(2)+' / '+st.crit+'%</b></div></div>'
+  +'<div class="kvBtns">'
+  +(S.potions.s>0?'<button class="btn sm green" onclick="usePotion(\''+id+'\',\'s\')">药水(小) ×'+S.potions.s+'</button>':'')
+  +(S.potions.m>0?'<button class="btn sm green" onclick="usePotion(\''+id+'\',\'m\')">药水(大) ×'+S.potions.m+'</button>':'')
+  +(h.star<5?'<button class="btn sm purple" onclick="starUp(\''+id+'\')">升星（碎片 '+h.shards+'/'+STAR_COST[h.star+1]+'）</button>':'<button class="btn sm gray" disabled>已满星</button>')
+  +'</div>';
+ }else if(tab==='gear'){
+  body=eqHtml+(myItems.length?'<div style="margin-top:10px;font-size:13px;font-weight:800">可穿戴装备（点击穿戴）</div>'+myItems.map(it=>{const E=EQUIPS[it.itemId];return '<div class="rowItem"><span style="font-size:19px">'+E.icon+'</span><div class="grow"><div class="t" style="font-size:13.5px">'+E.name+' <span class="dim">'+SLOT_CN[E.slot]+'</span></div><div class="d">'+(E.atk?'攻击 +'+E.atk+' ':'')+(E.hp?'生命 +'+E.hp+' ':'')+(E.def?'防御 +'+E.def:'')+'</div></div><button class="btn sm blue" onclick="equipItem(\''+id+'\','+it.uid+')">穿戴</button><button class="btn sm gray" onclick="sellItem('+it.uid+',\''+id+'\')">出售 150</button></div>';}).join(''):'<p class="dim" style="font-size:12.5px;margin-top:8px">背包里暂无可穿戴装备，去副本战斗有机会掉落。</p>');
+ }else{
+  body='<p style="font-size:12.5px;line-height:1.75;margin-top:8px">职业：'+H.cls+' · '+(H.row==='front'?'前排':'后排')+'<br>大招【'+H.ult.name+'】'+H.ult.desc+'<br>被动【'+H.passive.name+'】'+H.passive.desc+(h.star>=3?' <span class="grn">（已激活）</span>':' <span class="dim">（3 星激活）</span>')+'<br><span class="dim">获取方式：召唤，或在精英副本收集碎片合成 / 升星。</span></p>';
+ }
+ openModal(head+body+'<div class="kvBtns"><button class="btn gray" onclick="closeModal()">关闭</button>'+(inTeam?'':'<button class="btn" onclick="quickTeam(\''+id+'\')">上阵</button>')+'</div>');
  drawChibi($('mhCv'),H);
 }
 function quickTeam(id){const H=HERO_MAP[id];const wantFront=H.row==='front';
- const order=wantFront?[0,1,2,3,4]:[2,3,4,0,1];
- for(const i of order){if(!S.team[i]){S.team[i]=id;break;}}
+ const T=CT();const order=wantFront?[0,1,2,3,4]:[2,3,4,0,1];
+ for(const i of order){if(!T[i]){T[i]=id;break;}}
  closeModal();toast(H.name+' 已加入阵容');saveGame();renderHeroes();}
 function usePotion(id,size){
  if(S.potions[size]<=0)return;S.potions[size]--;
  const before=S.heroes[id].lvl;gainHeroXp(id,size==='s'?120:500);
  if(S.heroes[id].lvl>before){dailyProg('levelup',S.heroes[id].lvl-before);toast('🎉 '+HERO_MAP[id].name+' 升到 '+S.heroes[id].lvl+' 级！');SFX.win();}
- saveGame();openHero(id);updateBadges();
+ saveGame();openHero(id,'grow');updateBadges();
 }
 function starUp(id){
  const h=S.heroes[id];const cost=STAR_COST[h.star+1];
  if(h.shards<cost){toast('碎片不足：还差 '+(cost-h.shards)+' 个');SFX.err();return;}
- h.shards-=cost;h.star++;SFX.summon();toast('⭐ '+HERO_MAP[id].name+' 升到 '+h.star+' 星！'+(h.star===3?'被动技能激活！':''));saveGame();openHero(id);updateBadges();
+ h.shards-=cost;h.star++;SFX.summon();toast('⭐ '+HERO_MAP[id].name+' 升到 '+h.star+' 星！'+(h.star===3?'被动技能激活！':''));saveGame();openHero(id,'grow');updateBadges();
 }
-function equipItem(hid,uid){const h=S.heroes[hid];const it=S.items.find(i=>i.uid===uid);h.eq[EQUIPS[it.itemId].slot]=uid;SFX.click();saveGame();openHero(hid);}
-function sellItem(uid,hid){S.items=S.items.filter(i=>i.uid!==uid);S.gold+=150;SFX.coin();saveGame();openHero(hid);renderTop();}
+function equipItem(hid,uid){const h=S.heroes[hid];const it=S.items.find(i=>i.uid===uid);h.eq[EQUIPS[it.itemId].slot]=uid;SFX.click();saveGame();openHero(hid,'gear');}
+function sellItem(uid,hid){S.items=S.items.filter(i=>i.uid!==uid);S.gold+=150;SFX.coin();saveGame();openHero(hid,'gear');renderTop();}
 /* ================= 召唤 ================= */
 function renderSummon(){
  const el=$('scr-summon');
@@ -1160,7 +1194,7 @@ function startBattle(cfg){
  $('btLog').innerHTML='';{const fd=$('btFeed');if(fd)fd.innerHTML='';}
  B={units:[],waves:cfg.waves,wave:0,speed:(S.setSpd||1),autoUlt:(S.setAuto!==false),over:false,fast:false,paused:false,allyDeaths:0,mkFoe:cfg.mkFoe,onEnd:cfg.onEnd,title:cfg.title};
  if(USE3D())bt3dInit(cfg.bg);
- S.team.forEach((id,i)=>{if(id){const u=heroUnit(id,i);B.units.push(u);}});
+ (cfg.team||S.team).forEach((id,i)=>{if(id){const u=heroUnit(id,i);B.units.push(u);}});
  applyAuras(B.units);
  B.units.forEach(u=>{u.el=unitEl(u);refreshUnit(u);});
  $('btTitle').textContent=cfg.title;
@@ -1273,7 +1307,7 @@ function startArenaBattle(i){
  const o=arenaOpps[i];if(!o)return;
  if(S.team.filter(Boolean).length<1){toast('先上阵英雄');return;}
  dailyProg('arena');
- startBattle({title:'竞技场 · vs '+o.name,bg:'',
+ startBattle({title:'竞技场 · vs '+o.name,bg:'',team:(S.teamArena&&S.teamArena.some(Boolean)?S.teamArena:S.team),
   waves:[o.team],
   mkFoe:(hid,idx)=>foeHeroUnit(hid,o.lvl,o.star,idx),
   onEnd(win){
