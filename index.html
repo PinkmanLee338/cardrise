@@ -239,6 +239,13 @@ input{user-select:text;-webkit-user-select:text}
 .feedLine{font-size:12px;color:#e8ecff;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.65);opacity:0;transform:translateX(-6px);transition:opacity .9s ease,transform .3s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .feedLine.on{opacity:1;transform:none}
 .feedLine.out{opacity:0}
+#bossBar{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:84%;z-index:7;display:flex;align-items:center;gap:7px;background:rgba(10,6,24,.74);border:1px solid rgba(255,120,90,.55);border-radius:99px;padding:4px 11px;pointer-events:none}
+#bossName{font-size:11.5px;font-weight:900;color:#ffb59d;white-space:nowrap}
+.bbTrack{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
+#bossFill{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5a3c,#ff9d45);border-radius:5px;transition:width .18s}
+#bossHp{font-size:10.5px;color:#ffd9c9;font-variant-numeric:tabular-nums;white-space:nowrap}
+.starPop{display:inline-block;animation:starIn .45s cubic-bezier(.2,2.2,.4,1) both}
+@keyframes starIn{0%{transform:scale(0) rotate(-40deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
 #btBtns{padding:9px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:9px;background:rgba(0,0,0,.4)}
 #btBtns .btn{flex:1}
 /* ---------- 召唤 ---------- */
@@ -315,7 +322,7 @@ input{user-select:text;-webkit-user-select:text}
 
 <div id="battleScr">
  <div id="btTop"><div class="plate blue">⚔️ 团长 Lv.<span id="btMeLv">1</span></div><div id="btTimer">00:00</div><div class="plate red"><span id="btTitle">战斗</span><span class="dim" id="btWave"></span></div></div>
- <div id="btStage"><div id="btGround"></div><div id="ultFlash"></div><div id="waveTag"></div><div id="btFeed"></div>
+ <div id="btStage"><div id="btGround"></div><div id="ultFlash"></div><div id="waveTag"></div><div id="btFeed"></div><div id="bossBar" style="display:none"><span id="bossName"></span><div class="bbTrack"><i id="bossFill"></i></div><span id="bossHp"></span></div>
   <div id="ultBanner"><div class="in"><canvas id="ultCv" width="184" height="184"></canvas><div><div class="sk" id="ultSkill"></div><div class="who" id="ultWho"></div></div></div></div>
  </div>
  <div id="btStack"><button id="btPause" class="stk">⏸</button><button id="btAuto" class="stk on">自动</button><button id="btSpd" class="stk">×1</button><button id="btSkip" class="stk">⏩</button></div>
@@ -349,7 +356,9 @@ const SFX={hit(){beep(rnd(150,210),.07,'square',.06)},crit(){beep(330,.13,'squar
  summon(){[523,784,1046,1318].forEach((f,i)=>setTimeout(()=>beep(f,.2,'sine',.07),i*80))},click(){beep(700,.05,'sine',.04)},err(){beep(150,.14,'square',.06)}};
 let toastTimer=null;
 function toast(msg){const t=$('toast');t.innerHTML='<span class="big">'+msg+'</span>';t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.style.transition='opacity .5s';t.style.opacity=0;},1900);}
-function openModal(html){$('modalBox').innerHTML=html;$('modal').classList.add('on');}
+function openModal(html){$('modalBox').innerHTML=html;$('modal').classList.add('on');rollNumbers();}
+function rollNumbers(){document.querySelectorAll('#modalBox .rollNum').forEach(el=>{const v=+el.dataset.v||0;const t0=Date.now();const iv=setInterval(()=>{const k=Math.min(1,(Date.now()-t0)/650);el.textContent=fmtN(Math.round(v*(1-Math.pow(1-k,3))));if(k>=1)clearInterval(iv);},40);});}
+function battleStatsHtml(){if(!B)return'';const hs=B.units.filter(u=>u.isHero);const byD=[...hs].sort((a,b)=>(b.dmgDealt||0)-(a.dmgDealt||0)).filter(u=>(u.dmgDealt||0)>0).slice(0,3);const byH=[...hs].sort((a,b)=>(b.healDealt||0)-(a.healDealt||0)).filter(u=>(u.healDealt||0)>0).slice(0,2);if(!byD.length&&!byH.length)return'';let h='<div style="background:#17102a;border:1px solid #3a2c5e;border-radius:10px;padding:8px 11px;margin-top:7px;font-size:12.5px;line-height:1.75">';if(byD.length)h+='<div>⚔️ 输出：'+byD.map(u=>u.name+' <b class="gold">'+fmtN(u.dmgDealt)+'</b>').join(' · ')+'</div>';if(byH.length)h+='<div>💚 治疗：'+byH.map(u=>u.name+' <b class="grn">'+fmtN(u.healDealt)+'</b>').join(' · ')+'</div>';return h+'</div>';}
 function closeModal(){$('modal').classList.remove('on');}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))closeModal();});
 /* ================= 英雄数据 =================
@@ -633,6 +642,7 @@ function updateBadges(){
  set('bdgArena',S.arena.day!==todayStr());
 }
 let curScr='home';
+let lastStarter=null;
 function goScr(name){
  curScr=name;
  document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('on',b.dataset.nav===name));
@@ -876,7 +886,7 @@ function mkUnit(side,def,lvl,stats,slot,isHero,star){
   maxhp:stats.hp,hp:stats.hp,atk:stats.atk,defense:stats.def,spd:stats.spd,crit:stats.crit,
   energy:irnd(5,20),alive:true,atkCd:rnd(0.4,1.1),stun:0,slowT:0,slowAmt:0,shield:0,tauntT:0,dots:[],hots:[],buffAtkPct:0,ultCd:0};
  const hp0=HOME_POS[side][slot];u.px=hp0.x;u.pz=hp0.z;u.homeX=hp0.x;u.homeZ=hp0.z;
- u.faceA=side==='ally'?Math.PI/2:-Math.PI/2;u.curTgt=null;u.windup=0;u.pendingAtk=null;u.ultWindup=0;
+ u.faceA=side==='ally'?Math.PI/2:-Math.PI/2;u.curTgt=null;u.windup=0;u.pendingAtk=null;u.ultWindup=0;u.dmgDealt=0;u.healDealt=0;
  u.range=unitRange(u);u.melee=u.range<2;
  return u;
 }
@@ -967,7 +977,7 @@ function dealDmg(src,tgt,mult,opt){
  dmg=Math.max(1,Math.round(dmg));
  let absorbed=0;
  if(tgt.shield>0){absorbed=Math.min(tgt.shield,dmg);tgt.shield-=absorbed;dmg-=absorbed;}
- tgt.hp-=dmg;
+ tgt.hp-=dmg;if(src.isHero)src.dmgDealt=(src.dmgDealt||0)+dmg+absorbed;
  if(dmg>0){tgt.energy=clamp(tgt.energy+11,0,100);floatDmg(tgt,(crit?'暴击 ':'')+'-'+dmg,crit?'crit':'hurt');}
  else floatDmg(tgt,'护盾吸收','miss');
  fxSlash(tgt);
@@ -987,7 +997,7 @@ function dealDmg(src,tgt,mult,opt){
 function doHeal(src,tgt,amt,silent){
  if(!tgt||!tgt.alive)return;let a=amt;
  if(src.isHero&&src.star>=3&&src.def.passive&&src.def.passive.key==='healup')a=Math.round(a*1.2);
- tgt.hp=Math.min(tgt.maxhp,tgt.hp+a);if(!silent)floatDmg(tgt,'+'+a,'heal');refreshUnit(tgt);
+ const hb=tgt.hp;tgt.hp=Math.min(tgt.maxhp,tgt.hp+a);if(src.isHero)src.healDealt=(src.healDealt||0)+(tgt.hp-hb);if(!silent)floatDmg(tgt,'+'+a,'heal');refreshUnit(tgt);
 }
 function killUnit(src,tgt){
  tgt.alive=false;tgt.hp=0;tgt.energy=0;tgt.windup=0;tgt.pendingAtk=null;tgt.ultWindup=0;
@@ -1049,6 +1059,7 @@ function battleTick(){
   if(u.energy>=100&&u.def.ult&&u.windup<=0&&u.ultWindup<=0&&(B.autoUlt||u.side==='foe')){u.ultWindup=0.5;if(G3)bt3dCharge(u);if(u.el)u.el.classList.add('charging');}
   syncUnitPos(u);refreshUnit(u);
  }
+ updateBossBar();
  for(let i=0;i<B.units.length;i++){const a=B.units[i];if(!a.alive)continue;
   for(let j=i+1;j<B.units.length;j++){const b=B.units[j];if(!b.alive)continue;
    const dx=b.px-a.px,dz=b.pz-a.pz;const d2=dx*dx+dz*dz;
@@ -1147,7 +1158,7 @@ function startBattle(cfg){
  /* cfg: {title, bg, waves, mkFoe(w,i), onEnd(win), fleeLabel} */
  document.querySelectorAll('#btStage .unit').forEach(e=>e.remove());
  $('btLog').innerHTML='';{const fd=$('btFeed');if(fd)fd.innerHTML='';}
- B={units:[],waves:cfg.waves,wave:0,speed:1,autoUlt:true,over:false,fast:false,paused:false,allyDeaths:0,mkFoe:cfg.mkFoe,onEnd:cfg.onEnd,title:cfg.title};
+ B={units:[],waves:cfg.waves,wave:0,speed:(S.setSpd||1),autoUlt:(S.setAuto!==false),over:false,fast:false,paused:false,allyDeaths:0,mkFoe:cfg.mkFoe,onEnd:cfg.onEnd,title:cfg.title};
  if(USE3D())bt3dInit(cfg.bg);
  S.team.forEach((id,i)=>{if(id){const u=heroUnit(id,i);B.units.push(u);}});
  applyAuras(B.units);
@@ -1157,7 +1168,7 @@ function startBattle(cfg){
  $('battleScr').classList.add('on');
  if(G3)G3.onResize();
  $('btDone').style.display='none';$('btAgain').style.display='none';$('btFlee').style.display='block';
- $('btAuto').classList.add('on');$('btSpd').textContent='×1';$('btPause').textContent='⏸';$('btTimer').textContent='00:00';$('btTimer').classList.remove('hot');$('btMeLv').textContent=S.accLvl||1;
+ $('btAuto').classList.toggle('on',B.autoUlt);$('btSpd').textContent='×'+B.speed;$('btPause').textContent='⏸';$('btTimer').textContent='00:00';$('btTimer').classList.remove('hot');$('btMeLv').textContent=S.accLvl||1;
  spawnWave();buildBtCards();
  clearInterval(btTimer);btTimer=setInterval(battleTick,100);
 }
@@ -1169,11 +1180,14 @@ function endBattle(win){
  $('btFlee').style.display='none';
  setTimeout(()=>{if(!B||B!==BB)return;try{BB.onEnd(win);}catch(e){openModal('<h3>'+(win?'🎉 胜利！':'💀 败北……')+'</h3><p style="line-height:1.8;font-size:13.5px">结算显示出了点小问题，战斗结果已记录。</p><div class="kvBtns"><button class="btn" onclick="closeModal();closeBattle();renderHome()">返回</button></div>');}},B.fast?50:900);
 }
-function closeBattle(){$('battleScr').classList.remove('on');clearInterval(btTimer);if(G3)bt3dDispose();B=null;}
+function closeBattle(){$('battleScr').classList.remove('on');clearInterval(btTimer);if(G3)bt3dDispose();B=null;const bbEl=$('bossBar');if(bbEl)bbEl.style.display='none';}
+function updateBossBar(){const bar=$('bossBar');if(!bar||!B)return;const bs=B.units.find(u=>u.alive&&u.side==='foe'&&u.def.role==='boss');if(!bs){bar.style.display='none';return;}bar.style.display='flex';$('bossName').textContent='👑 '+bs.name;$('bossFill').style.width=clamp(bs.hp/bs.maxhp*100,0,100)+'%';$('bossHp').textContent=Math.max(0,Math.ceil(bs.hp))+'/'+bs.maxhp;}
 $('btFlee').onclick=()=>{if(B&&!B.over){B.over=true;closeBattle();toast('已撤退');if(curScr==='home')renderHome();}};
-$('btSpd').onclick=e=>{if(!B)return;B.speed=B.speed===1?2:1;e.target.textContent='×'+B.speed;};
-$('btPause').onclick=e=>{if(!B||B.over)return;B.paused=!B.paused;e.target.textContent=B.paused?'▶':'⏸';toast(B.paused?'已暂停':'继续战斗');};
-$('btAuto').onclick=e=>{if(!B)return;B.autoUlt=!B.autoUlt;e.currentTarget.classList.toggle('on',B.autoUlt);toast(B.autoUlt?'自动大招：开':'自动大招：关，能量满后点下方英雄卡释放');};
+$('btSpd').onclick=e=>{if(!B)return;B.speed=B.speed===1?2:1;e.target.textContent='×'+B.speed;S.setSpd=B.speed;saveGame();};
+$('btPause').onclick=e=>{if(!B||B.over||B.paused)return;B.paused=true;$('btPause').textContent='▶';openModal('<h3>⏸ 战斗暂停</h3><div class="kvBtns" style="flex-direction:column;gap:9px"><button class="btn" onclick="resumeBattle()">▶ 继续战斗</button><button class="btn blue" onclick="restartBattle()">🔄 重新开始</button><button class="btn gray" onclick="closeModal();document.getElementById(\'btFlee\').click()">🏳️ 撤退</button></div>');};
+function resumeBattle(){closeModal();if(B){B.paused=false;$('btPause').textContent='⏸';}}
+function restartBattle(){closeModal();const f=lastStarter;closeBattle();if(f)f();}
+$('btAuto').onclick=e=>{if(!B)return;B.autoUlt=!B.autoUlt;e.currentTarget.classList.toggle('on',B.autoUlt);S.setAuto=B.autoUlt;saveGame();toast(B.autoUlt?'自动大招：开':'自动大招：关，能量满后点下方英雄卡释放');};
 $('btSkip').onclick=()=>{
  if(!B||B.over)return;B.paused=false;$('btPause').textContent='⏸';B.fast=true;let n=0;
  while(!B.over&&n<4000){for(let i=0;i<10;i++)battleTick();n++;}
@@ -1197,6 +1211,7 @@ function updateBtCards(){if(!B)return;for(const u of B.units){if(u.side!=='ally'
  const dd=!u.alive;if(c.dd!==dd){c.dd=dd;c.root.classList.toggle('dead',dd);}}}
 /* ================= 关卡战斗入口 ================= */
 function startStageBattle(c,s,elite){
+ lastStarter=()=>startStageBattle(c,s,elite);
  closeModal();
  const team=S.team.filter(Boolean);
  if(team.length<1){toast('先去「英雄」页上阵至少 1 名英雄');SFX.err();return;}
@@ -1215,9 +1230,10 @@ function startStageBattle(c,s,elite){
    const map=elite?S.elite:S.stages;map[k]=Math.max(map[k]||0,stars);homeChap=-1;
    const nc=s<7?c:c+1,ns=s<7?s+1:0;const hasNext=nc<CHAPTERS.length&&stageUnlocked(nc,ns,elite);
    saveGame();renderTop();
-   openModal('<h3>🎉 胜利！<span style="color:#ffd100">'+'★'.repeat(stars)+'<span class="dim">'+'★'.repeat(3-stars)+'</span></span> <span class="x" onclick="closeModal();closeBattle();renderHome()">✕</span></h3>'
-   +'<p style="line-height:1.85;font-size:13.5px">获得 🪙 '+r.gold+' 金币 · 团长经验 +'+r.xp+(r.drops.length?'<br>掉落：'+r.drops.join('、'):'')+(stars>=3?'<br><span class="grn">三星通关！本关已解锁扫荡</span>':'<br><span class="dim">全员存活可得三星，解锁扫荡</span>')+'</p>'
+   openModal('<h3>🎉 胜利！<span style="color:#ffd100">'+Array.from({length:stars},(_,i)=>'<span class="starPop" style="animation-delay:'+(i*0.28)+'s">★</span>').join('')+'<span class="dim">'+'★'.repeat(3-stars)+'</span></span> <span class="x" onclick="closeModal();closeBattle();renderHome()">✕</span></h3>'
+   +'<p style="line-height:1.85;font-size:13.5px">获得 🪙 <span class="rollNum" data-v="'+r.gold+'">0</span> 金币 · 团长经验 +<span class="rollNum" data-v="'+r.xp+'">0</span>'+(r.drops.length?'<br>掉落：'+r.drops.join('、'):'')+(stars>=3?'<br><span class="grn">三星通关！本关已解锁扫荡</span>':'<br><span class="dim">全员存活可得三星，解锁扫荡</span>')+'</p>'
    +'<div style="background:#17102a;border:1px solid #3a2c5e;border-radius:10px;padding:8px 11px;margin-top:4px">'+r.heroReport.map(hr=>'<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2.5px 0"><span>'+HERO_MAP[hr.id].name+'</span>'+(hr.lvlUp?'<span class="grn" style="font-weight:800">⬆ Lv.'+hr.lvl+'！生命+'+hr.dHp+' 攻击+'+hr.dAtk+' 防御+'+hr.dDef+'</span>':'<span class="dim">经验 +'+hr.xpGain+'（'+hr.prog+'）</span>')+'</div>').join('')+'</div>'
+   +battleStatsHtml()
    +'<div class="kvBtns"><button class="btn gray" onclick="closeModal();closeBattle();renderHome()">返回</button><button class="btn blue" onclick="closeModal();closeBattle();startStageBattle('+c+','+s+','+elite+')">再打一次</button>'+(hasNext?'<button class="btn" onclick="closeModal();closeBattle();startStageBattle('+nc+','+ns+','+elite+')">下一关 ▶</button>':'')+'</div>');
   }});
 }
@@ -1253,6 +1269,7 @@ function renderArena(){
  el.querySelectorAll('canvas[data-hero]').forEach(cv=>drawChibi(cv,HERO_MAP[cv.dataset.hero]));
 }
 function startArenaBattle(i){
+ lastStarter=()=>startArenaBattle(i);
  const o=arenaOpps[i];if(!o)return;
  if(S.team.filter(Boolean).length<1){toast('先上阵英雄');return;}
  dailyProg('arena');
@@ -1264,7 +1281,7 @@ function startArenaBattle(i){
     let bonus='';if(S.arena.day!==todayStr()){S.arena.day=todayStr();S.arena.dayWins=0;}
     if(S.arena.dayWins<3){S.arena.dayWins++;S.gems+=30;bonus='<br>每日首胜奖励 💎 +30（'+S.arena.dayWins+'/3）';}
     arenaOpps.splice(i,1);saveGame();renderTop();
-    openModal('<h3>🏆 竞技场胜利！ <span class="x" onclick="closeModal();closeBattle();renderArena()">✕</span></h3><p style="line-height:1.85;font-size:13.5px">积分 +'+gain+'（当前 '+S.arena.pts+' 分）'+bonus+'</p><div class="kvBtns"><button class="btn" onclick="closeModal();closeBattle();renderArena()">返回竞技场</button></div>');
+    openModal('<h3>🏆 竞技场胜利！ <span class="x" onclick="closeModal();closeBattle();renderArena()">✕</span></h3><p style="line-height:1.85;font-size:13.5px">积分 +'+gain+'（当前 '+S.arena.pts+' 分）'+bonus+'</p>'+battleStatsHtml()+'<div class="kvBtns"><button class="btn" onclick="closeModal();closeBattle();renderArena()">返回竞技场</button></div>');
    }else{const lose=Math.min(12,S.arena.pts-800>0?12:0);S.arena.pts=Math.max(800,S.arena.pts-12);saveGame();
     openModal('<h3>败北…… <span class="x" onclick="closeModal();closeBattle();renderArena()">✕</span></h3><p style="line-height:1.8;font-size:13.5px">积分 -12（当前 '+S.arena.pts+' 分）<br><span class="dim">强化英雄、调整阵容克制对方后再来！</span></p><div class="kvBtns"><button class="btn gray" onclick="closeModal();closeBattle();renderArena()">返回竞技场</button></div>');}
   }});
