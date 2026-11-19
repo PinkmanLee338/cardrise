@@ -244,6 +244,17 @@ input{user-select:text;-webkit-user-select:text}
 .bbTrack{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
 #bossFill{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5a3c,#ff9d45);border-radius:5px;transition:width .18s}
 #bossHp{font-size:10.5px;color:#ffd9c9;font-variant-numeric:tabular-nums;white-space:nowrap}
+.res{cursor:pointer}
+.pityWrap{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:#e8dcff}
+.pityBar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.16);overflow:hidden}
+.pityBar i{display:block;height:100%;background:linear-gradient(90deg,#c07dff,#ff9dd8);border-radius:4px;transition:width .3s}
+#summonResults .flipCard{width:calc(33% - 7px);height:178px;perspective:600px;cursor:pointer;position:relative}
+#summonResults .fcInner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+#summonResults .flipCard.flipped .fcInner{transform:rotateY(180deg)}
+#summonResults .fcBack,#summonResults .flipCard .fcFront{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px}
+#summonResults .fcBack{display:flex;align-items:center;justify-content:center;font-size:34px;color:#ffd100;background:linear-gradient(160deg,#3a2c6e,#241a4a);border:2px solid #57468a}
+#summonResults .flipCard .fcFront{transform:rotateY(180deg);width:100%;height:100%;animation:none;overflow:hidden}
+#summonResults .flipCard.newTag .fcFront::after{content:'NEW!';position:absolute;top:4px;right:4px;background:#e83a2a;color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:3}
 .tslot.sel{border-color:#ffd100;border-style:solid;box-shadow:0 0 0 2px rgba(255,209,0,.45)}
 .hcard .hb{position:absolute;top:4px;right:4px;font-size:9.5px;font-weight:800;padding:1.5px 6px;border-radius:7px;z-index:2;color:#fff}
 .hcard .hb.up{background:#2fbf71}
@@ -304,9 +315,9 @@ input{user-select:text;-webkit-user-select:text}
  <div id="topbar">
   <div id="avatarBox"></div>
   <div id="accInfo"><div class="nm" id="accName">冒险者</div><div class="lv" id="accLv">Lv.1 团长</div><div id="accXpBar"><i id="accXpFill" style="width:0%"></i></div></div>
-  <div class="res stam"><span class="ic">⚡</span><span class="vl" id="resStam">120</span><span class="plus" id="buyStam">+</span></div>
-  <div class="res"><span class="ic">🪙</span><span class="vl" id="resGold">0</span></div>
-  <div class="res"><span class="ic">💎</span><span class="vl" id="resGem">0</span><span class="plus" id="buyGem">+</span></div>
+  <div class="res stam" onclick="resInfo('stam')"><span class="ic">⚡</span><span class="vl" id="resStam">120</span><span class="plus" id="buyStam">+</span></div>
+  <div class="res" onclick="resInfo('gold')"><span class="ic">🪙</span><span class="vl" id="resGold">0</span></div>
+  <div class="res" onclick="resInfo('gem')"><span class="ic">💎</span><span class="vl" id="resGem">0</span><span class="plus" id="buyGem">+</span></div>
  </div>
  <div id="main">
   <div class="screen" id="scr-home"></div>
@@ -336,7 +347,7 @@ input{user-select:text;-webkit-user-select:text}
 </div>
 
 <div class="modal" id="modal"><div class="modalBox" id="modalBox"></div></div>
-<div id="summonFx"><div class="beam" id="summonBeam"></div><div id="summonTitle" style="font-size:19px;font-weight:900;color:#ffe9a8;margin-bottom:14px">召唤中……</div><div id="summonResults"></div><button class="btn" id="summonClose" style="margin-top:18px;display:none">太棒了！</button></div>
+<div id="summonFx"><div class="beam" id="summonBeam"></div><div id="summonTitle" style="font-size:19px;font-weight:900;color:#ffe9a8;margin-bottom:14px">召唤中……</div><div id="summonResults"></div><button class="btn blue" id="summonFlipAll" style="margin-top:18px;display:none">全部翻开</button><button class="btn" id="summonClose" style="margin-top:18px;display:none">太棒了！</button></div>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -359,7 +370,7 @@ const SFX={hit(){beep(rnd(150,210),.07,'square',.06)},crit(){beep(330,.13,'squar
  win(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.2,'triangle',.08),i*90))},lose(){beep(220,.45,'sawtooth',.07,60)},
  summon(){[523,784,1046,1318].forEach((f,i)=>setTimeout(()=>beep(f,.2,'sine',.07),i*80))},click(){beep(700,.05,'sine',.04)},err(){beep(150,.14,'square',.06)}};
 let toastTimer=null;
-function toast(msg){const t=$('toast');t.innerHTML='<span class="big">'+msg+'</span>';t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.style.transition='opacity .5s';t.style.opacity=0;},1900);}
+function toast(msg){const t=$('toast');t.innerHTML='<span class="big">'+msg+'</span>';t.style.transition='none';t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.style.transition='opacity .5s';t.style.opacity=0;},1900);}
 function openModal(html){$('modalBox').innerHTML=html;$('modal').classList.add('on');rollNumbers();}
 function rollNumbers(){document.querySelectorAll('#modalBox .rollNum').forEach(el=>{const v=+el.dataset.v||0;const t0=Date.now();const iv=setInterval(()=>{const k=Math.min(1,(Date.now()-t0)/650);el.textContent=fmtN(Math.round(v*(1-Math.pow(1-k,3))));if(k>=1)clearInterval(iv);},40);});}
 function battleStatsHtml(){if(!B)return'';const hs=B.units.filter(u=>u.isHero);const byD=[...hs].sort((a,b)=>(b.dmgDealt||0)-(a.dmgDealt||0)).filter(u=>(u.dmgDealt||0)>0).slice(0,3);const byH=[...hs].sort((a,b)=>(b.healDealt||0)-(a.healDealt||0)).filter(u=>(u.healDealt||0)>0).slice(0,2);if(!byD.length&&!byH.length)return'';let h='<div style="background:#17102a;border:1px solid #3a2c5e;border-radius:10px;padding:8px 11px;margin-top:7px;font-size:12.5px;line-height:1.75">';if(byD.length)h+='<div>⚔️ 输出：'+byD.map(u=>u.name+' <b class="gold">'+fmtN(u.dmgDealt)+'</b>').join(' · ')+'</div>';if(byH.length)h+='<div>💚 治疗：'+byH.map(u=>u.name+' <b class="grn">'+fmtN(u.healDealt)+'</b>').join(' · ')+'</div>';return h+'</div>';}
@@ -576,7 +587,7 @@ function newSave(){
   guide:{summoned:false,battled:false},uidSeq:1};
 }
 function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
-function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};S.teamArena=S.teamArena||null;
+function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};S.teamArena=S.teamArena||null;S.summonHist=S.summonHist||[];
  if(TEST_MODE){S.gold=Math.max(S.gold,999999);S.gems=Math.max(S.gems,999999);S.stam=Math.max(S.stam,9999);S.potions.s=Math.max(S.potions.s,99);S.potions.m=Math.max(S.potions.m,99);}}
 function accXpNeed(l){return Math.round(60*Math.pow(l,1.5));}
 function stamMax(){return 120+S.accLvl*2;}
@@ -657,10 +668,31 @@ function goScr(name){
  $('main').scrollTop=0;renderTop();
 }
 document.querySelectorAll('.navBtn').forEach(b=>b.onclick=()=>{SFX.click();goScr(b.dataset.nav);});
-$('buyStam').onclick=()=>{if(S.stam>=stamMax()){toast('体力已满');return;}
+$('buyStam').onclick=e=>{e.stopPropagation();if(S.stam>=stamMax()){toast('体力已满');return;}
  if(S.gems<30){toast('钻石不足');SFX.err();return;}
  openModal('<h3>补充体力 <span class="x" onclick="closeModal()">✕</span></h3><p style="line-height:1.7">花费 💎30 补充 ⚡60 点体力？<br><span class="dim">当前体力：'+S.stam+'/'+stamMax()+'</span></p><div class="kvBtns"><button class="btn gray" onclick="closeModal()">取消</button><button class="btn green" onclick="S.gems-=30;S.stam+=60;closeModal();toast(\'体力 +60\');renderTop();saveGame();">确认补充</button></div>');};
-$('buyGem').onclick=()=>{toast('钻石可通过成就、日常、竞技场与签到获得');};
+$('buyGem').onclick=e=>{e.stopPropagation();resInfo('gem');};
+function resInfo(kind){
+ if(kind==='gold')openModal('<h3>🪙 金币 <span class="x" onclick="closeModal()">✕</span></h3><p style="line-height:1.85;font-size:13.5px">当前金币：<b class="gold">'+fmtN(S.gold)+'</b><br><br>主要来源：<br>· 副本战斗与扫荡（主要收入）<br>· 出售多余装备（每件 🪙150）<br>· 章节星级宝箱、签到与日常任务<br><br>主要用途：酒馆金币召唤、商店购买药水。</p><div class="kvBtns"><button class="btn" onclick="closeModal();goScr(\'home\')">去刷副本</button></div>');
+ else if(kind==='gem')openModal('<h3>💎 钻石 <span class="x" onclick="closeModal()">✕</span></h3><p style="line-height:1.85;font-size:13.5px">当前钻石：<b class="gold">'+fmtN(S.gems)+'</b><br><br>主要来源：<br>· 竞技场每日首胜（💎30/场，每日前 3 场）<br>· 章节星级宝箱与关卡首通奖励<br>· 成就、签到与日常任务<br><br>主要用途：钻石召唤、补充体力、商店装备宝箱。</p><div class="kvBtns"><button class="btn" onclick="closeModal();goScr(\'arena\')">去竞技场</button><button class="btn purple" onclick="closeModal();goScr(\'summon\')">去召唤</button></div>');
+ else openModal('<h3>⚡ 体力 <span class="x" onclick="closeModal()">✕</span></h3><p style="line-height:1.85;font-size:13.5px">当前体力：<b class="gold">'+(TEST_MODE?'∞（内测模式，不消耗）':S.stam+' / '+stamMax())+'</b><br><br>· 每 45 秒自动恢复 1 点<br>· 挑战副本消耗体力（精英关更多）<br>· 可用 💎30 立即补充 60 点</p><div class="kvBtns"><button class="btn green" onclick="closeModal();document.getElementById(\'buyStam\').click()">💎30 补充 60 体力</button></div>');
+}
+const SHOP=[
+ {k:'potS',icon:'🧪',name:'经验药水（小）',desc:'给英雄 +120 经验',cur:'gold',price:800},
+ {k:'potM',icon:'⚗️',name:'经验药水（大）',desc:'给英雄 +500 经验',cur:'gem',price:25},
+ {k:'stam',icon:'⚡',name:'体力 +60',desc:'立即补充 60 点体力',cur:'gem',price:30},
+ {k:'chest',icon:'🎁',name:'随机装备宝箱',desc:'随机开出一件装备（副本掉落池）',cur:'gem',price:120},
+];
+function buyShop(k){
+ const it=SHOP.find(x=>x.k===k);if(!it)return;
+ if(it.cur==='gold'){if(S.gold<it.price){toast('金币不足');SFX.err();return;}S.gold-=it.price;}
+ else{if(S.gems<it.price){toast('钻石不足');SFX.err();return;}S.gems-=it.price;}
+ if(k==='potS'){S.potions.s++;SFX.coin();toast('购买成功：经验药水（小）');}
+ else if(k==='potM'){S.potions.m++;SFX.coin();toast('购买成功：经验药水（大）');}
+ else if(k==='stam'){S.stam+=60;SFX.coin();toast('体力 +60');}
+ else if(k==='chest'){const eid=pick(EQUIP_DROPS);S.items.push({uid:S.uidSeq++,itemId:eid});SFX.summon();toast('🎁 开出装备：'+EQUIPS[eid].name);}
+ saveGame();renderTop();renderMore();updateBadges();
+}
 /* ================= 副本主页 ================= */
 let homeMode='normal';let homeChap=-1;
 function stageKey(c,s){return (c+1)+'-'+(s+1);}
@@ -855,9 +887,10 @@ function sellItem(uid,hid){S.items=S.items.filter(i=>i.uid!==uid);S.gold+=150;SF
 function renderSummon(){
  const el=$('scr-summon');
  el.innerHTML='<div class="secTitle">英雄召唤</div>'
- +'<div class="summonHero gem"><div class="t">💎 钻石召唤 · 群英殿</div><div class="d">必出紫色以上英雄！十连必出至少 1 名紫色史诗。<br>橙色传说概率 3% · 紫色 22% · 蓝色 75%<br>当前保底进度：再抽 '+Math.max(0,10-S.summon.pity)+' 次必出紫色+</div><div class="summonBtns"><button class="btn purple" onclick="doSummon(\'gem\',1)">召唤 ×1 · 💎280</button><button class="btn purple" onclick="doSummon(\'gem\',10)">召唤 ×10 · 💎2520</button></div></div>'
+ +'<div class="summonHero gem"><div class="t">💎 钻石召唤 · 群英殿</div><div class="d">必出紫色以上英雄！十连必出至少 1 名紫色史诗。<br>橙色传说概率 3% · 紫色 22% · 蓝色 75%</div><div class="pityWrap"><div class="pityBar"><i style="width:'+(S.summon.pity*10)+'%"></i></div><span>保底 '+S.summon.pity+'/10 · 再抽 '+Math.max(0,10-S.summon.pity)+' 次必出紫色+</span></div><div class="summonBtns"><button class="btn purple" onclick="doSummon(\'gem\',1)">召唤 ×1 · 💎280</button><button class="btn purple" onclick="doSummon(\'gem\',10)">召唤 ×10 · 💎2520</button></div></div>'
  +'<div class="summonHero goldb"><div class="t">🪙 金币召唤 · 酒馆</div><div class="d">酒馆里鱼龙混杂，偶尔也能淘到好苗子。<br>紫色概率 2% · 蓝色 38% · 其余为碎片/药水<br>已召唤 '+S.summon.goldTotal+' 次</div><div class="summonBtns"><button class="btn" onclick="doSummon(\'gold\',1)">召唤 ×1 · 🪙10000</button><button class="btn" onclick="doSummon(\'gold\',10)">召唤 ×10 · 🪙90000</button></div></div>'
- +'<div class="card"><div style="font-weight:900;margin-bottom:4px">📖 召唤说明</div><div class="dim" style="font-size:12.5px;line-height:1.75">抽到已拥有的英雄会转化为该英雄碎片：蓝色 +10、紫色 +30、橙色 +80。碎片可用于升星（2星20 / 3星40 / 4星80 / 5星150），集齐 20 个未拥有英雄的碎片也可直接合成该英雄——碎片在「英雄」页查看。</div></div>';
+ +'<div class="card"><div style="font-weight:900;margin-bottom:4px">📖 召唤说明</div><div class="dim" style="font-size:12.5px;line-height:1.75">抽到已拥有的英雄会转化为该英雄碎片：蓝色 +10、紫色 +30、橙色 +80。碎片可用于升星（2星20 / 3星40 / 4星80 / 5星150），集齐 20 个未拥有英雄的碎片也可直接合成该英雄——碎片在「英雄」页查看。</div></div>'
+ +((S.summonHist&&S.summonHist.length)?'<div class="card" style="margin-top:12px"><div style="font-weight:900;margin-bottom:4px">🕘 最近召唤记录</div><div style="font-size:12.5px;line-height:1.85">'+S.summonHist.map(hh=>'<span style="color:'+RAR_COLOR[hh.rar]+';font-weight:700">'+hh.n+'</span>').join(' · ')+'</div></div>':'');
 }
 function rollRarity(gem){
  if(gem){const r=Math.random();return r<0.03?4:r<0.25?3:2;}
@@ -882,6 +915,7 @@ function doSummon(type,n){
  if(gem&&n===10&&!gotPurplePlus){/* 十连保底：把最后一张蓝卡升级为紫卡 */
   const idx=results.map((r,i)=>r.rar===2?i:-1).filter(i=>i>=0).pop();
   if(idx!=null){const H=pick(HEROES.filter(h=>h.rarity===3));results[idx]={hero:H.id,rar:3,isNew:!S.heroes[H.id]};if(!S.heroes[H.id])S.heroes[H.id]={lvl:1,xp:0,star:1,shards:0,eq:{}};}}
+ S.summonHist=S.summonHist||[];results.forEach(r=>{S.summonHist.unshift(r.junk==='shard'?{n:HERO_MAP[r.hero].name.split('·')[0]+' 碎片',rar:2}:{n:HERO_MAP[r.hero].name,rar:r.rar});});S.summonHist=S.summonHist.slice(0,20);
  dailyProg('summon');SFX.summon();saveGame();renderTop();updateBadges();
  /* 演出 */
  const fx=$('summonFx');fx.style.display='flex';
@@ -890,15 +924,22 @@ function doSummon(type,n){
  $('summonBeam').style.boxShadow='0 0 60px 20px '+(maxRar===4?'rgba(255,157,69,.6)':maxRar===3?'rgba(192,125,255,.6)':'rgba(74,184,255,.5)');
  $('summonTitle').textContent=maxRar===4?'✦ 传说降临！✦':maxRar===3?'史诗英雄！':'召唤结果';
  const box=$('summonResults');box.innerHTML='';
+ $('summonClose').style.display='none';$('summonFlipAll').style.display='block';
  results.forEach((r,i)=>{setTimeout(()=>{
-  if(r.junk==='shard'){box.innerHTML+='<div class="hcard r2"><div style="font-size:34px;padding:16px 0 6px">🧩</div><div class="nm">'+HERO_MAP[r.hero].name.split('·')[0]+' 碎片</div><div class="meta"><span>碎片 +5</span></div></div>';}
-  else{const H=HERO_MAP[r.hero];const d=document.createElement('div');d.className='hcard r'+r.rar+(r.isNew?' newTag':'');
-   d.innerHTML='<canvas width="140" height="140"></canvas><div class="nm">'+H.name+'</div><div class="meta"><span>'+H.cls+'</span><span>'+(r.isNew?'<span class="grn">新英雄！</span>':'碎片 +'+r.dup)+'</span></div>';
-   box.appendChild(d);drawChibi(d.querySelector('canvas'),H);}
-  if(i===results.length-1)$('summonClose').style.display='block';
+  const d=document.createElement('div');d.className='flipCard'+(r.isNew?' newTag':'');
+  let front;
+  if(r.junk==='shard'){front='<div style="font-size:34px;padding:16px 0 6px">🧩</div><div class="nm">'+HERO_MAP[r.hero].name.split('·')[0]+' 碎片</div><div class="meta"><span>碎片 +5</span></div>';}
+  else{const H=HERO_MAP[r.hero];front='<canvas width="140" height="140"></canvas><div class="nm">'+H.name+'</div><div class="meta"><span>'+H.cls+'</span><span>'+(r.isNew?'<span class="grn">新英雄！</span>':'碎片 +'+r.dup)+'</span></div>';}
+  d.innerHTML='<div class="fcInner"><div class="fcBack">✦</div><div class="fcFront hcard r'+r.rar+'">'+front+'</div></div>';
+  d.onclick=()=>{if(!d.classList.contains('flipped')){d.classList.add('flipped');SFX.click();summonFlippedCheck();}};
+  box.appendChild(d);
+  if(!r.junk){const cv=d.querySelector('canvas');if(cv)drawChibi(cv,HERO_MAP[r.hero]);}
  },180*(i+1));});
  $('summonClose').onclick=()=>{fx.style.display='none';$('summonClose').style.display='none';renderSummon();};
+ $('summonFlipAll').onclick=flipAllSummons;
 }
+function summonFlippedCheck(){const cards=[...$('summonResults').children];if(cards.length&&cards.every(d=>d.classList.contains('flipped'))){$('summonClose').style.display='block';$('summonFlipAll').style.display='none';}}
+function flipAllSummons(){const cards=[...$('summonResults').children];cards.forEach((d,i)=>setTimeout(()=>{d.classList.add('flipped');SFX.click();},i*90));setTimeout(summonFlippedCheck,cards.length*90+500);}
 /* ================= 战斗引擎 ================= */
 let B=null,btTimer=null;
 const ALLY_POS=[{x:27,y:35},{x:27,y:65},{x:11,y:18},{x:11,y:50},{x:11,y:82}];
@@ -1323,6 +1364,10 @@ function startArenaBattle(i){
 /* ================= 福利页：签到 / 日常 / 成就 ================= */
 function renderMore(){
  const el=$('scr-more');let html='';
+ /* 商店 */
+ html+='<div class="secTitle">商店</div><div class="card" style="margin-bottom:14px">'
+ +SHOP.map(it=>'<div class="rowItem"><span style="font-size:20px">'+it.icon+'</span><div class="grow"><div class="t">'+it.name+'</div><div class="d">'+it.desc+'</div></div><button class="btn sm" onclick="buyShop(\''+it.k+'\')">'+(it.cur==='gold'?'🪙 ':'💎 ')+it.price+'</button></div>').join('')
+ +'</div>';
  /* 签到 */
  const signedToday=S.signin.last===todayStr();const dayIdx=S.signin.count%7;
  html+='<div class="secTitle">每日签到</div><div class="card" style="margin-bottom:14px"><div class="signGrid">';
