@@ -319,9 +319,9 @@ input{user-select:text;-webkit-user-select:text}
   <div id="ultBanner"><div class="in"><canvas id="ultCv" width="184" height="184"></canvas><div><div class="sk" id="ultSkill"></div><div class="who" id="ultWho"></div></div></div></div>
  </div>
  <div id="btStack"><button id="btPause" class="stk">⏸</button><button id="btAuto" class="stk on">自动</button><button id="btSpd" class="stk">×1</button><button id="btSkip" class="stk">⏩</button></div>
+ <div id="btBtns"><button class="btn gray" id="btFlee">🏳️ 撤退</button><button class="btn blue" id="btAgain" style="display:none">再来一场</button><button class="btn" id="btDone" style="display:none">领取奖励</button></div>
  <div id="btCards"></div>
  <div id="btLog"></div>
- <div id="btBtns"><button class="btn gray" id="btFlee">🏳️ 撤退</button><button class="btn blue" id="btAgain" style="display:none">再来一场</button><button class="btn" id="btDone" style="display:none">领取奖励</button></div>
 </div>
 
 <div class="modal" id="modal"><div class="modalBox" id="modalBox"></div></div>
@@ -1100,7 +1100,7 @@ function castUlt(u){
   case 'snipe':{const t=pickTarget(u,'lowhp');if(t)dealDmg(u,t,ult.mult);break;}
   case 'backstab':{const t=pickTarget(u,'back');if(t)dealDmg(u,t,ult.mult,{forceCrit:true});break;}
   case 'multiShot':{const fs=[...foesOf(u)].sort(()=>Math.random()-0.5).slice(0,ult.count||3);fs.forEach(f=>dealDmg(u,f,ult.mult));break;}
-  case 'flurry':{for(let i=0;i<(ult.hits||4);i++){const t=pickTarget(u,'front');if(t)setTimeout(((tt,ii)=>()=>{if(u.alive&&tt.alive)dealDmg(u,tt,ult.mult);})(t,i),i*120);}break;}
+  case 'flurry':{const BB=B;for(let i=0;i<(ult.hits||4);i++){const t=pickTarget(u,'front');if(t)setTimeout(((tt,ii)=>()=>{if(B&&B===BB&&!B.over&&u.alive&&tt.alive)dealDmg(u,tt,ult.mult);})(t,i),i*120);}break;}
   case 'dotAll':foesOf(u).forEach(f=>{dealDmg(u,f,ult.mult,ULT_DOPT);f.dots.push({t:ult.dotTicks,tick:0,amt:Math.round(A*ult.dotMult),src:u});});break;
   case 'healAll':alliesOf(u).forEach(a=>doHeal(u,a,Math.round(A*ult.mult)));SFX.heal();break;
   case 'hotAll':alliesOf(u).forEach(a=>a.hots.push({t:ult.hotTicks,tick:0,amt:Math.round(A*ult.mult),src:u}));SFX.heal();break;
@@ -1115,7 +1115,7 @@ function castUlt(u){
  if(tele&&G3&&!B.fast){const tgts=ult.type==='frontAoe'?(()=>{const fs=foesOf(u).filter(f=>f.row==='front');return fs.length?fs:foesOf(u);})():foesOf(u);
   if(tgts.length){const cx=tgts.reduce((s,x)=>s+x.px,0)/tgts.length,cz=tgts.reduce((s,x)=>s+x.pz,0)/tgts.length;
    bt3dTelegraph(cx,cz,tele.r,tele.c);bt3dSkillRain(ult.type,cx,cz,tele.r);
-   setTimeout(()=>{if(B&&!B.over){ULT_DOPT={ultLand:true};runUltDamage();ULT_DOPT=null;bt3dRing(cx,cz,tele.c,0.4,tele.r);bt3dBurst(cx,cz,tele.c,8);}},750);
+   const BB=B;setTimeout(()=>{if(B&&B===BB&&!B.over){ULT_DOPT={ultLand:true};runUltDamage();ULT_DOPT=null;bt3dRing(cx,cz,tele.c,0.4,tele.r);bt3dBurst(cx,cz,tele.c,8);}},750);
   }else runUltDamage();
  }else runUltDamage();
  if(G3&&!B.fast&&!tele)bt3dUltEffect(u,ult);
@@ -1162,12 +1162,12 @@ function startBattle(cfg){
  clearInterval(btTimer);btTimer=setInterval(battleTick,100);
 }
 function endBattle(win){
- if(!B||B.over)return;B.over=true;clearInterval(btTimer);
+ if(!B||B.over)return;B.over=true;clearInterval(btTimer);const BB=B;
  if(win)SFX.win();else SFX.lose();
  btLogFn(win?'🎉 胜利！':'💀 败北……');
  if(win&&G3)B.units.filter(u=>u.side==='ally'&&u.alive&&u.g3).forEach((u,i)=>{setTimeout(()=>{if(!u.g3)return;bt3dTween(0.8,k=>{if(u.g3)u.g3.hopY=Math.abs(Math.sin(k*Math.PI*2))*0.55;},()=>{if(u.g3)u.g3.hopY=0;});bt3dSparks(u,0xffd76a,8);},i*70);});
  $('btFlee').style.display='none';
- setTimeout(()=>{if(B)B.onEnd(win);},B.fast?50:900);
+ setTimeout(()=>{if(!B||B!==BB)return;try{BB.onEnd(win);}catch(e){openModal('<h3>'+(win?'🎉 胜利！':'💀 败北……')+'</h3><p style="line-height:1.8;font-size:13.5px">结算显示出了点小问题，战斗结果已记录。</p><div class="kvBtns"><button class="btn" onclick="closeModal();closeBattle();renderHome()">返回</button></div>');}},B.fast?50:900);
 }
 function closeBattle(){$('battleScr').classList.remove('on');clearInterval(btTimer);if(G3)bt3dDispose();B=null;}
 $('btFlee').onclick=()=>{if(B&&!B.over){B.over=true;closeBattle();toast('已撤退');if(curScr==='home')renderHome();}};
