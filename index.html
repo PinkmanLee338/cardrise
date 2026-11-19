@@ -244,6 +244,19 @@ input{user-select:text;-webkit-user-select:text}
 .bbTrack{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
 #bossFill{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5a3c,#ff9d45);border-radius:5px;transition:width .18s}
 #bossHp{font-size:10.5px;color:#ffd9c9;font-variant-numeric:tabular-nums;white-space:nowrap}
+.btn{transition:transform .08s ease}.btn:active{transform:scale(.95)}
+.hcard:active{transform:scale(.97)}
+.tslot:active{transform:scale(.96)}
+#flyLayer{position:fixed;inset:0;pointer-events:none;z-index:400;overflow:hidden}
+.flyTxt{position:absolute;font-weight:900;font-size:17px;text-shadow:0 2px 6px rgba(0,0,0,.55);animation:flyUp 1.15s ease-out both;white-space:nowrap}
+@keyframes flyUp{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(0) scale(1.1)}100%{opacity:0;transform:translateY(-66px) scale(1)}}
+.hubBanner{display:flex;align-items:center;gap:10px;background:linear-gradient(120deg,#4a2c8a,#274a8a);border:1.5px solid #6a54b8;border-radius:14px;padding:12px 13px;margin-bottom:12px;box-shadow:0 4px 14px rgba(20,8,60,.35)}
+.hubBanner .hbT{font-weight:900;font-size:15px;color:#ffe9a8}
+.hubBanner .hbD{font-size:12px;color:#cfd8ff;margin-top:2px}
+.todoRow{display:flex;gap:8px;align-items:center;padding:6.5px 2px;border-top:1px solid rgba(255,255,255,.06);cursor:pointer;font-size:13.5px}
+.todoRow:first-of-type{border-top:none}
+.actStrip{background:linear-gradient(90deg,#8a3a1e,#a8541e);border:1px solid #c97a3a;color:#ffe2b8;font-size:12.5px;font-weight:800;text-align:center;padding:9px 10px;border-radius:11px;margin-bottom:12px;cursor:pointer}
+#scr-more .modeTabs button{flex:1;padding-left:2px;padding-right:2px;font-size:13px;white-space:nowrap}
 .res{cursor:pointer}
 #summonResults{width:min(430px,94vw)}
 #summonResults .flipCard{flex:0 0 calc(33.333% - 6px)}
@@ -309,7 +322,7 @@ input{user-select:text;-webkit-user-select:text}
  <div class="tsBox">
   <div class="tsTitle">MT卡牌崛起</div>
   <div class="tsSub">集结你的英雄 · 踏上晨星大陆</div>
-  <button class="tsBtn" onclick="document.getElementById('titleScr').style.display='none'">▶ 开始冒险</button>
+  <button class="tsBtn" onclick="document.getElementById('titleScr').style.display='none';maybeGuide()">▶ 开始冒险</button>
   <div class="tsTip">内测版 · 进度保存在本机浏览器</div>
  </div>
 </div>
@@ -351,6 +364,7 @@ input{user-select:text;-webkit-user-select:text}
 <div class="modal" id="modal"><div class="modalBox" id="modalBox"></div></div>
 <div id="summonFx"><div class="beam" id="summonBeam"></div><div id="summonTitle" style="font-size:19px;font-weight:900;color:#ffe9a8;margin-bottom:14px">召唤中……</div><div id="summonResults"></div><button class="btn blue" id="summonFlipAll" style="margin-top:18px;display:none">全部翻开</button><button class="btn" id="summonClose" style="margin-top:18px;display:none">太棒了！</button></div>
 <div id="toast"></div>
+<div id="flyLayer"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -642,7 +656,8 @@ function addShards(hid,n){if(S.heroes[hid])S.heroes[hid].shards+=n;else S.shardB
 function synthHero(id){if((S.shardBank[id]||0)<20)return;S.shardBank[id]-=20;S.heroes[id]={lvl:1,xp:0,star:1,shards:0,eq:{}};SFX.summon();toast('🎉 合成英雄：'+HERO_MAP[id].name);saveGame();closeModal();renderHeroes();updateBadges();}
 function grantRew(r,silent){if(r.gold)S.gold+=r.gold;if(r.gem)S.gems+=r.gem;if(r.stam)S.stam+=r.stam;
  if(r.item){S.items.push({uid:S.uidSeq++,itemId:r.item});}
- if(!silent)toast('获得奖励：'+rewText(r));renderTop();saveGame();}
+ if(!silent){toast('获得奖励：'+rewText(r));if(r.gold)flyReward('🪙 +'+fmtN(r.gold),'#ffd100');if(r.gem)setTimeout(()=>flyReward('💎 +'+r.gem,'#7ad8ff'),130);if(r.stam)flyReward('⚡ +'+r.stam,'#ffe27a');}renderTop();saveGame();}
+function flyReward(txt,color){const L=$('flyLayer');if(!L)return;const s=document.createElement('span');s.className='flyTxt';s.textContent=txt;s.style.color=color||'#ffd100';s.style.left=(36+Math.random()*26)+'%';s.style.top=(52+Math.random()*10)+'%';L.appendChild(s);setTimeout(()=>{if(s.parentNode)s.parentNode.removeChild(s);},1250);}
 /* ================= 顶栏与导航 ================= */
 function renderTop(){
  $('resGold').textContent=fmtN(S.gold);$('resGem').textContent=fmtN(S.gems);
@@ -696,7 +711,8 @@ function buyShop(k){
  saveGame();renderTop();renderMore();updateBadges();
 }
 /* ================= 副本主页 ================= */
-let homeMode='normal';let homeChap=-1;
+let homeMode='normal';let homeChap=-1;let moreTab='shop';
+function setMoreTab(t){moreTab=t;renderMore();}
 function stageKey(c,s){return (c+1)+'-'+(s+1);}
 function stageUnlocked(c,s,elite){
  if(c===0&&s===0)return true;
@@ -722,10 +738,32 @@ function mapDeco(bg){
  if(bg==='grave')return '<span class="mapDeco" style="left:82%;top:7%">🌙</span><span class="mapDeco" style="left:6%;top:14%">🦉</span><span class="mapDeco" style="left:63%;top:66%">🪦</span><span class="mapDeco" style="left:31%;top:84%">🪦</span>';
  if(bg==='cave')return '<span class="mapDeco" style="left:84%;top:9%">🌋</span><span class="mapDeco" style="left:8%;top:12%">🔥</span><span class="mapDeco" style="left:60%;top:80%">💎</span><span class="mapDeco" style="left:37%;top:7%">🦇</span>';
  return '<span class="mapDeco" style="left:85%;top:6%">☀️</span><span class="mapDeco" style="left:5%;top:9%">🌳</span><span class="mapDeco" style="left:67%;top:72%">🌲</span><span class="mapDeco" style="left:23%;top:90%">🌼</span>';}
+function hubHtml(){
+ const cur=currentStage(false);const allClear=CHAPTERS.every((cc,ci)=>cc.stages.every((_,s)=>S.stages[stageKey(ci,s)]>0));
+ let h='<div class="hubBanner">';
+ if(allClear){h+='<div class="grow" style="flex:1"><div class="hbT">🎉 主线普通副本已通关！</div><div class="hbD">精英副本掉落英雄碎片，去把队伍升满星吧</div></div><button class="btn" onclick="homeMode=\'elite\';homeChap=-1;renderHome()">去精英副本</button>';}
+ else{const st=CHAPTERS[cur.c].stages[cur.s];h+='<div class="grow" style="flex:1"><div class="hbT">▶ 继续冒险 · 第'+(cur.c+1)+'章 第'+(cur.s+1)+'关 '+st.n+'</div><div class="hbD">推荐战力 '+stageRecPower(cur.c,cur.s,false)+' · 你的战力 '+fmtN(teamPower())+'</div></div><button class="btn" onclick="homeChap='+cur.c+';openStage('+cur.c+','+cur.s+',false)">出发</button>';}
+ h+='</div>';
+ const signed=S.signin.last===todayStr();
+ const dClaim=DAILIES.filter(d=>(S.daily.prog[d.key]||0)>=d.need&&!S.daily.claimed.includes(d.key)).length;
+ const aLeft=S.arena.day===todayStr()?3-S.arena.dayWins:3;
+ let chestReady=0;CHAPTERS.forEach((cc,ci)=>{const cs=chapterStars(ci,false);CHESTS.forEach(ch2=>{if(!S.chests['n'+ci+'-'+ch2.stars]&&cs>=ch2.stars)chestReady++;});});
+ const rows=[
+  {ic:'🎁',t:'每日签到',s:signed?'已完成':'今天还没签到',done:signed,hot:!signed,act:"goScr('more');setMoreTab('signin')"},
+  {ic:'📋',t:'日常任务',s:dClaim>0?('有 '+dClaim+' 个奖励可领取！'):('已领取 '+S.daily.claimed.length+' / '+DAILIES.length),done:dClaim===0&&S.daily.claimed.length>=DAILIES.length,hot:dClaim>0,act:"goScr('more');setMoreTab('daily')"},
+  {ic:'🏟️',t:'竞技场首胜',s:aLeft>0?('今日还可赢 '+aLeft+' 场 · 💎30/场'):'今日奖励已领满',done:aLeft===0,hot:false,act:"goScr('arena')"},
+  {ic:'⭐',t:'章节宝箱',s:chestReady>0?('有 '+chestReady+' 个宝箱可领取！'):'暂无可领取宝箱',done:chestReady===0,hot:chestReady>0,act:"goScr('home')"},
+ ];
+ h+='<div class="card" style="margin-bottom:12px;padding:10px 12px"><div style="font-weight:900;font-size:13.5px;margin-bottom:4px">📋 今日待办</div>'
+  +rows.map(r=>'<div class="todoRow" onclick="'+r.act+'"><span>'+r.ic+'</span><span class="grow" style="flex:1">'+r.t+'</span><span class="'+(r.done?'grn':r.hot?'gold':'dim')+'" style="font-size:12px">'+r.s+'</span><span class="dim">›</span></div>').join('')+'</div>';
+ h+='<div class="actStrip" onclick="goScr(\'more\');setMoreTab(\'signin\')">🔥 内测福利：签到、任务、成就奖励天天领 · 商店宝箱上新中 ›</div>';
+ return h;
+}
 function renderHome(){
  const el=$('scr-home');const elite=homeMode==='elite';const cur=currentStage(elite);
  const c=homeChap>=0?homeChap:cur.c;const ch=CHAPTERS[c];
- let html='<div class="card" style="margin-bottom:12px;padding:10px 12px"><div style="display:flex;align-items:center;gap:9px"><div style="font-size:21px">⚔️</div><div class="grow" style="flex:1"><div style="font-weight:900;font-size:14.5px">当前阵容战力 <span class="gold">'+fmtN(teamPower())+'</span></div><div class="dim" style="font-size:11.5px">在「英雄」页点击阵容槽位可以调整上阵英雄</div></div><button class="btn sm blue" onclick="goScr(\'heroes\')">调阵容</button></div></div>';
+ let html=hubHtml();
+ html+='<div class="card" style="margin-bottom:12px;padding:10px 12px"><div style="display:flex;align-items:center;gap:9px"><div style="font-size:21px">⚔️</div><div class="grow" style="flex:1"><div style="font-weight:900;font-size:14.5px">当前阵容战力 <span class="gold">'+fmtN(teamPower())+'</span></div><div class="dim" style="font-size:11.5px">在「英雄」页点击阵容槽位可以调整上阵英雄</div></div><button class="btn sm blue" onclick="goScr(\'heroes\')">调阵容</button></div></div>';
  html+='<div class="modeTabs"><button class="'+(homeMode==='normal'?'on':'')+'" onclick="homeMode=\'normal\';homeChap=-1;renderHome()">普通副本</button><button class="'+(homeMode==='elite'?'on':'')+'" onclick="homeMode=\'elite\';homeChap=-1;renderHome()">精英副本 · 英雄碎片</button></div>';
  html+='<div class="chapChips">'+CHAPTERS.map((cc,ci)=>{const un=stageUnlocked(ci,0,elite);
   return '<button class="chapChip'+(ci===c?' on':'')+(un?'':' locked')+'" onclick="pickChap('+ci+')">'+(ci===cur.c?'▶ ':'')+'第'+(ci+1)+'章 '+cc.name+'<br>★ '+chapterStars(ci,elite)+' / 24</button>';}).join('')+'</div>';
@@ -1366,32 +1404,61 @@ function startArenaBattle(i){
 /* ================= 福利页：签到 / 日常 / 成就 ================= */
 function renderMore(){
  const el=$('scr-more');let html='';
+ html+='<div class="modeTabs">'+[['shop','🛒 商店'],['signin','🎁 签到'],['daily','📋 任务'],['ach','🏆 成就'],['set','⚙️ 设置']].map(x=>'<button class="'+(moreTab===x[0]?'on':'')+'" onclick="moreTab=\''+x[0]+'\';renderMore()">'+x[1]+'</button>').join('')+'</div>';
  /* 商店 */
+ if(moreTab==='shop'){
  html+='<div class="secTitle">商店</div><div class="card" style="margin-bottom:14px">'
  +SHOP.map(it=>'<div class="rowItem"><span style="font-size:20px">'+it.icon+'</span><div class="grow"><div class="t">'+it.name+'</div><div class="d">'+it.desc+'</div></div><button class="btn sm" onclick="buyShop(\''+it.k+'\')">'+(it.cur==='gold'?'🪙 ':'💎 ')+it.price+'</button></div>').join('')
  +'</div>';
+ }
  /* 签到 */
+ if(moreTab==='signin'){
  const signedToday=S.signin.last===todayStr();const dayIdx=S.signin.count%7;
  html+='<div class="secTitle">每日签到</div><div class="card" style="margin-bottom:14px"><div class="signGrid">';
  SIGNIN_REW.forEach((r,i)=>{const got=i<dayIdx||(signedToday&&i===dayIdx);const isToday=i===dayIdx&&!signedToday;
   html+='<div class="signCell '+(got?'got':'')+(isToday?' today':'')+'"><div class="ic">'+(r.gem?'💎':r.gold?'🪙':r.stam?'⚡':'🎁')+'</div>第'+(i+1)+'天<br>'+rewText(r)+(got?'<br><span class="grn">已领取</span>':'')+'</div>';});
  html+='</div><button class="btn green" style="width:100%;margin-top:11px" '+(signedToday?'disabled':'')+' onclick="doSignin()">'+(signedToday?'今日已签到':'立即签到')+'</button></div>';
+ }
  /* 日常 */
- html+='<div class="secTitle">日常任务</div><div class="card" style="margin-bottom:14px">';
+ if(moreTab==='daily'){
+ const dClaimN=DAILIES.filter(d=>(S.daily.prog[d.key]||0)>=d.need&&!S.daily.claimed.includes(d.key)).length;
+ html+='<div style="display:flex;align-items:center;gap:8px"><div class="secTitle" style="flex:1">日常任务</div>'+(dClaimN?'<button class="btn sm green" onclick="claimAllDaily()">一键领取 ('+dClaimN+')</button>':'')+'</div><div class="card" style="margin-bottom:14px">';
  DAILIES.forEach(d=>{const prog=Math.min(d.need,S.daily.prog[d.key]||0);const claimed=S.daily.claimed.includes(d.key);const done=prog>=d.need;
   html+='<div class="rowItem"><div class="grow"><div class="t">'+d.t+'</div><div class="d">'+d.d+'</div><div class="progBar"><i style="width:'+(prog/d.need*100)+'%"></i></div></div><div style="text-align:right"><div class="dim" style="font-size:11.5px">'+prog+'/'+d.need+'</div>'+(claimed?'<span class="grn" style="font-size:12.5px;font-weight:800">已领取</span>':'<button class="btn sm" '+(done?'':'disabled')+' onclick="claimDaily(\''+d.key+'\')">'+rewText(d.rew)+'</button>')+'</div></div>';});
  html+='</div>';
+ }
  /* 成就 */
- html+='<div class="secTitle">成就</div><div class="card" style="margin-bottom:14px">';
+ if(moreTab==='ach'){
+ const aClaimN=ACHS.filter(a=>a.test()&&!S.achClaimed.includes(a.key)).length;
+ html+='<div style="display:flex;align-items:center;gap:8px"><div class="secTitle" style="flex:1">成就</div>'+(aClaimN?'<button class="btn sm green" onclick="claimAllAch()">一键领取 ('+aClaimN+')</button>':'')+'</div><div class="card" style="margin-bottom:14px">';
  ACHS.forEach(a=>{const claimed=S.achClaimed.includes(a.key);const done=a.test();
   html+='<div class="rowItem"><div class="grow"><div class="t">'+(done?'🏅 ':'')+a.t+'</div><div class="d">'+a.d+'</div></div>'+(claimed?'<span class="grn" style="font-size:12.5px;font-weight:800">已领取</span>':'<button class="btn sm" '+(done?'':'disabled')+' onclick="claimAch(\''+a.key+'\')">'+rewText(a.rew)+'</button>')+'</div>';});
  html+='</div>';
+ }
+ if(moreTab==='set'){
  html+='<div class="card"><div style="font-weight:900;margin-bottom:5px">⚙️ 设置</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm gray" onclick="muted=!muted;this.textContent=muted?\'🔇 已静音\':\'🔊 声音开\'">🔊 声音开</button><button class="btn sm gray" onclick="renameAcc()">✏️ 改名</button><button class="btn sm gray" onclick="if(confirm(\'确定要删档重开吗？此操作不可恢复！\')){localStorage.removeItem(SAVE_KEY);location.reload();}">🗑️ 删档重开</button></div><div class="dim" style="font-size:11.5px;margin-top:8px;line-height:1.6">《MT卡牌崛起》· 向《我叫MT》致敬的单机卡牌游戏<br>进度自动保存在本机浏览器中。</div></div>';
+ html+='<div class="card" style="margin-top:12px"><div style="font-weight:900;margin-bottom:5px">💾 存档与帮助</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm blue" onclick="exportSave()">导出存档</button><button class="btn sm blue" onclick="importSave()">导入存档</button><button class="btn sm gray" onclick="showGuide(0)">📖 新手引导</button></div><div class="dim" style="font-size:11.5px;margin-top:8px;line-height:1.6">换手机或换浏览器前，先导出存档码保存好，再在新设备上导入即可继续游玩。</div></div>';
+ }
  el.innerHTML=html;
 }
 function doSignin(){if(S.signin.last===todayStr())return;const r=SIGNIN_REW[S.signin.count%7];S.signin.last=todayStr();S.signin.count++;grantRew(r);SFX.win();saveGame();renderMore();}
 function claimDaily(key){const d=DAILIES.find(x=>x.key===key);if(!d||S.daily.claimed.includes(key))return;S.daily.claimed.push(key);grantRew(d.rew);saveGame();renderMore();}
 function claimAch(key){const a=ACHS.find(x=>x.key===key);if(!a||S.achClaimed.includes(key)||!a.test())return;S.achClaimed.push(key);grantRew(a.rew);saveGame();renderMore();}
+function claimAllDaily(){let n=0;DAILIES.forEach(d=>{if((S.daily.prog[d.key]||0)>=d.need&&!S.daily.claimed.includes(d.key)){S.daily.claimed.push(d.key);grantRew(d.rew,true);n++;}});if(n){SFX.win();toast('一键领取了 '+n+' 个日常奖励');}else toast('暂无可领取的日常奖励');saveGame();renderMore();updateBadges();}
+function claimAllAch(){let n=0;ACHS.forEach(a=>{if(a.test()&&!S.achClaimed.includes(a.key)){S.achClaimed.push(a.key);grantRew(a.rew,true);n++;}});if(n){SFX.win();toast('一键领取了 '+n+' 个成就奖励');}else toast('暂无可领取的成就奖励');saveGame();renderMore();updateBadges();}
+function encodeSave(){return btoa(unescape(encodeURIComponent(JSON.stringify(S))));}
+function decodeSave(str){try{const o=JSON.parse(decodeURIComponent(escape(atob(String(str).trim()))));return (o&&o.heroes&&o.team)?o:null;}catch(e){return null;}}
+function exportSave(){const code=encodeSave();openModal('<h3>💾 导出存档 <span class="x" onclick="closeModal()">✕</span></h3><p class="dim" style="font-size:12.5px;line-height:1.7">把下面这串存档码保存到安全的地方（备忘录/聊天记录都行）。换设备时在新设备打开游戏 → 福利 → 设置 → 导入存档，粘贴即可恢复。</p><textarea id="expBox" readonly style="width:100%;height:110px;border-radius:8px;border:1.5px solid #57468a;background:#17102a;color:#ffe9a8;font-size:11px;padding:8px">'+code+'</textarea><div class="kvBtns"><button class="btn" onclick="const b=document.getElementById(\'expBox\');b.select();if(navigator.clipboard)navigator.clipboard.writeText(b.value);toast(\'存档码已复制（或长按全选复制）\')">复制存档码</button></div>');}
+function importSave(){openModal('<h3>📥 导入存档 <span class="x" onclick="closeModal()">✕</span></h3><p class="dim" style="font-size:12.5px;line-height:1.7">粘贴之前导出的存档码。<b style="color:#ff8a7a">导入会覆盖当前进度</b>，请确认无误。</p><textarea id="impBox" placeholder="把存档码粘贴到这里" style="width:100%;height:110px;border-radius:8px;border:1.5px solid #57468a;background:#17102a;color:#ffe9a8;font-size:11px;padding:8px"></textarea><div class="kvBtns"><button class="btn gray" onclick="closeModal()">取消</button><button class="btn green" onclick="doImport()">确认导入</button></div>');}
+function doImport(){const o=decodeSave(document.getElementById('impBox').value);if(!o){toast('存档码无效，请检查是否完整');SFX.err();return;}localStorage.setItem(SAVE_KEY,JSON.stringify(o));toast('导入成功，正在重新载入……');setTimeout(()=>location.reload(),600);}
+const GUIDE=[
+ {t:'👋 欢迎来到晨星大陆',d:'集结你的英雄小队，一路打通副本、登顶竞技场。这一页是你的大本营：顶部能看下一关，中间有每日待办。',b:'下一步'},
+ {t:'⚔️ 编队与战斗',d:'在「英雄」页点阵容槽位换人（点已上阵的再点另一个可交换），战斗中点底部发光的英雄卡释放大招，点敌方英雄能看它的属性。',b:'下一步'},
+ {t:'🎴 召唤与福利',d:'在「召唤」页抽新英雄：十连必出紫色，保底进度看得见。别忘了每天去「福利」页签到、领任务和成就奖励。祝开荒顺利！',b:'开始冒险'}];
+let guideStep=0;
+function showGuide(n){guideStep=n;const g=GUIDE[n];openModal('<h3>'+g.t+'</h3><p style="line-height:1.85;font-size:13.5px">'+g.d+'</p><div style="display:flex;justify-content:center;gap:6px;margin:12px 0 4px">'+GUIDE.map((_,i)=>'<span style="width:8px;height:8px;border-radius:50%;background:'+(i===n?'#ffd100':'#57468a')+'"></span>').join('')+'</div><div class="kvBtns"><button class="btn gray" onclick="endGuide()">跳过</button><button class="btn" onclick="'+(n>=GUIDE.length-1?'endGuide()':'showGuide('+(n+1)+')')+'">'+g.b+'</button></div>');}
+function endGuide(){S.guideDone=true;saveGame();closeModal();}
+function maybeGuide(){if(!S.guideDone&&(S.accLvl||1)<=1&&Object.keys(S.stages).length===0)setTimeout(()=>showGuide(0),350);}
 function renameAcc(){openModal('<h3>修改团长名 <span class="x" onclick="closeModal()">✕</span></h3><input id="rnInput" maxlength="8" value="'+S.name+'" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #57468a;background:#17102a;color:#ffe9a8;font-size:15px;text-align:center"><div class="kvBtns"><button class="btn" onclick="S.name=document.getElementById(\'rnInput\').value.trim()||S.name;closeModal();renderTop();saveGame();toast(\'改名成功\')">确认</button></div>');}
 /* ================= 3D 战斗场景（Three.js） ================= */
 const USE3D=()=>typeof THREE!=='undefined';
