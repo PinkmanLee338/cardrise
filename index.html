@@ -134,7 +134,7 @@ input{user-select:text;-webkit-user-select:text}
 #btStack .stk{width:46px;height:46px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(20,14,40,.72);color:#fff;font-size:12.5px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0}
 #btStack .stk.on{border-color:#ffd100;color:#ffd100;box-shadow:0 0 12px rgba(255,209,0,.55)}
 #btStack .stk:active{transform:scale(.93)}
-#btCards{display:flex;gap:7px;justify-content:center;padding:7px 8px 4px;background:rgba(0,0,0,.4);z-index:5}
+#btCards{display:flex;gap:7px;justify-content:center;padding:7px 8px 10px;background:rgba(0,0,0,.4);z-index:5}
 .btc{position:relative;width:19%;max-width:78px;border-radius:24px 24px 9px 9px;border:2.5px solid #b03a2e;background:linear-gradient(180deg,#3a2c50,#241a38);overflow:hidden;flex:none}
 .btc.r1{border-color:#5aa2e8}.btc.r2{border-color:#b06ee8}.btc.r3{border-color:#f08c0a}
 .btc canvas{width:100%;display:block}
@@ -149,8 +149,8 @@ input{user-select:text;-webkit-user-select:text}
 .btc.ready .bult{opacity:1}
 #btStage.shake{animation:shk .32s}
 @keyframes shk{0%,100%{transform:none}25%{transform:translate(3px,-2px)}55%{transform:translate(-3px,2px)}80%{transform:translate(2px,1px)}}
-#battleScr #ultBanner canvas{width:116px;height:116px}
-#battleScr #ultBanner .sk{font-size:33px;transform:rotate(-2deg)}
+#battleScr #ultBanner canvas{display:none}
+#battleScr #ultBanner .sk{font-size:46px;transform:rotate(-2deg)}
 #btStage{flex:1;position:relative;overflow:hidden;background:linear-gradient(180deg,#2c4a72 0%,#3a5f7a 34%,#4a7a4e 62%,#33512f 100%)}
 #btStage::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse at 50% 42%,transparent 52%,rgba(10,6,24,.42) 100%)}
 #titleScr{position:fixed;inset:0;z-index:300;background:url('title.jpg') center/cover no-repeat #17102a;display:flex;align-items:flex-end;justify-content:center}
@@ -234,7 +234,11 @@ input{user-select:text;-webkit-user-select:text}
 #ultBanner .who{font-size:13.5px;color:#fff;text-shadow:0 1px 3px #000}
 @keyframes ultIn{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 #waveTag{position:absolute;top:38%;left:50%;transform:translateX(-50%);font-size:30px;font-weight:900;color:#ffe9a8;text-shadow:0 0 18px rgba(255,150,0,.7),0 3px 0 #000;z-index:15;display:none;letter-spacing:4px}
-#btLog{height:64px;overflow:hidden;padding:6px 12px;font-size:11.5px;line-height:1.55;color:#b9c4e8;background:rgba(0,0,0,.45);display:flex;flex-direction:column;justify-content:flex-end}
+#btLog{display:none}
+#btFeed{position:absolute;left:10px;bottom:10px;z-index:6;pointer-events:none;max-width:64%;display:flex;flex-direction:column;gap:2px}
+.feedLine{font-size:12px;color:#e8ecff;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.65);opacity:0;transform:translateX(-6px);transition:opacity .9s ease,transform .3s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feedLine.on{opacity:1;transform:none}
+.feedLine.out{opacity:0}
 #btBtns{padding:9px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:9px;background:rgba(0,0,0,.4)}
 #btBtns .btn{flex:1}
 /* ---------- 召唤 ---------- */
@@ -311,7 +315,7 @@ input{user-select:text;-webkit-user-select:text}
 
 <div id="battleScr">
  <div id="btTop"><div class="plate blue">⚔️ 团长 Lv.<span id="btMeLv">1</span></div><div id="btTimer">00:00</div><div class="plate red"><span id="btTitle">战斗</span><span class="dim" id="btWave"></span></div></div>
- <div id="btStage"><div id="btGround"></div><div id="ultFlash"></div><div id="waveTag"></div>
+ <div id="btStage"><div id="btGround"></div><div id="ultFlash"></div><div id="waveTag"></div><div id="btFeed"></div>
   <div id="ultBanner"><div class="in"><canvas id="ultCv" width="184" height="184"></canvas><div><div class="sk" id="ultSkill"></div><div class="who" id="ultWho"></div></div></div></div>
  </div>
  <div id="btStack"><button id="btPause" class="stk">⏸</button><button id="btAuto" class="stk on">自动</button><button id="btSpd" class="stk">×1</button><button id="btSkip" class="stk">⏩</button></div>
@@ -929,7 +933,7 @@ function refreshUnit(u){
  u.el.classList.toggle('stunned',u.stun>0);
  u.el.querySelector('.shieldTag').style.display=u.shield>0?'block':'none';
 }
-function btLogFn(msg){const l=$('btLog');const d=document.createElement('div');d.textContent=msg;l.appendChild(d);while(l.children.length>4)l.removeChild(l.firstChild);}
+function btLogFn(msg){const f=$('btFeed');if(!f)return;const d=document.createElement('div');d.className='feedLine';d.textContent=msg;f.appendChild(d);while(f.children.length>5)f.removeChild(f.firstChild);if(window.requestAnimationFrame)requestAnimationFrame(()=>d.classList.add('on'));else d.classList.add('on');setTimeout(()=>d.classList.add('out'),2600);setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},3600);}
 function stagePos(u){if(G3&&u.g3)return bt3dProject(u);const st=$('btStage');return {x:(u.px+6.4)/12.8*(st.clientWidth||360),y:(u.pz+5.2)/10.4*(st.clientHeight||480)+14};}
 function syncUnitPos(u){if(!G3&&u.el){u.el.style.left=((u.px+6.4)/12.8*100)+'%';u.el.style.top=((u.pz+5.2)/10.4*100)+'%';}}
 function dist2d(a,b){const dx=a.px-b.px,dz=a.pz-b.pz;return Math.sqrt(dx*dx+dz*dz);}
@@ -1142,7 +1146,7 @@ function spawnWave(){
 function startBattle(cfg){
  /* cfg: {title, bg, waves, mkFoe(w,i), onEnd(win), fleeLabel} */
  document.querySelectorAll('#btStage .unit').forEach(e=>e.remove());
- $('btLog').innerHTML='';
+ $('btLog').innerHTML='';{const fd=$('btFeed');if(fd)fd.innerHTML='';}
  B={units:[],waves:cfg.waves,wave:0,speed:1,autoUlt:true,over:false,fast:false,paused:false,allyDeaths:0,mkFoe:cfg.mkFoe,onEnd:cfg.onEnd,title:cfg.title};
  if(USE3D())bt3dInit(cfg.bg);
  S.team.forEach((id,i)=>{if(id){const u=heroUnit(id,i);B.units.push(u);}});
@@ -1406,7 +1410,7 @@ function bt3dInit(bg){
   sg.fillStyle=gr;sg.fillRect(0,0,4,256);scene.background=new THREE.CanvasTexture(sc);}catch(e){}
  scene.fog=new THREE.Fog(bg==='grave'?0x23233a:bg==='cave'?0x2a140f:0x2c4630,18*distF,46*distF);
  const camera=new THREE.PerspectiveCamera(57,(st.clientWidth||360)/(st.clientHeight||480),0.1,120);
- camera.position.set(0,11.0*distF,12.5*distF);camera.lookAt(0,0,0.2);
+ camera.position.set(0,13.4*distF,15.4*distF);camera.lookAt(0,0,0.2);
  scene.add(new THREE.HemisphereLight(0xcfe8ff,0x33241a,0.95));
  const dl=new THREE.DirectionalLight(0xfff1d6,0.9);dl.position.set(4,9,5);dl.castShadow=true;
  dl.shadow.mapSize.set(1024,1024);dl.shadow.camera.left=-7;dl.shadow.camera.right=7;dl.shadow.camera.top=7;dl.shadow.camera.bottom=-7;scene.add(dl);
