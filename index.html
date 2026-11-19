@@ -602,7 +602,8 @@ function newSave(){
   daily:{date:todayStr(),prog:{},claimed:[]},achClaimed:[],signin:{last:'',count:0},
   guide:{summoned:false,battled:false},uidSeq:1};
 }
-function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+let __noSave=false;
+function saveGame(){if(__noSave)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
 function loadGame(){try{S=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){S=null;}if(!S||!S.heroes){S=newSave();saveGame();}S.shardBank=S.shardBank||{};S.chests=S.chests||{};S.teamArena=S.teamArena||null;S.summonHist=S.summonHist||[];
  if(TEST_MODE){S.gold=Math.max(S.gold,999999);S.gems=Math.max(S.gems,999999);S.stam=Math.max(S.stam,9999);S.potions.s=Math.max(S.potions.s,99);S.potions.m=Math.max(S.potions.m,99);}}
 function accXpNeed(l){return Math.round(60*Math.pow(l,1.5));}
@@ -1450,7 +1451,7 @@ function encodeSave(){return btoa(unescape(encodeURIComponent(JSON.stringify(S))
 function decodeSave(str){try{const o=JSON.parse(decodeURIComponent(escape(atob(String(str).trim()))));return (o&&o.heroes&&o.team)?o:null;}catch(e){return null;}}
 function exportSave(){const code=encodeSave();openModal('<h3>💾 导出存档 <span class="x" onclick="closeModal()">✕</span></h3><p class="dim" style="font-size:12.5px;line-height:1.7">把下面这串存档码保存到安全的地方（备忘录/聊天记录都行）。换设备时在新设备打开游戏 → 福利 → 设置 → 导入存档，粘贴即可恢复。</p><textarea id="expBox" readonly style="width:100%;height:110px;border-radius:8px;border:1.5px solid #57468a;background:#17102a;color:#ffe9a8;font-size:11px;padding:8px">'+code+'</textarea><div class="kvBtns"><button class="btn" onclick="const b=document.getElementById(\'expBox\');b.select();if(navigator.clipboard)navigator.clipboard.writeText(b.value);toast(\'存档码已复制（或长按全选复制）\')">复制存档码</button></div>');}
 function importSave(){openModal('<h3>📥 导入存档 <span class="x" onclick="closeModal()">✕</span></h3><p class="dim" style="font-size:12.5px;line-height:1.7">粘贴之前导出的存档码。<b style="color:#ff8a7a">导入会覆盖当前进度</b>，请确认无误。</p><textarea id="impBox" placeholder="把存档码粘贴到这里" style="width:100%;height:110px;border-radius:8px;border:1.5px solid #57468a;background:#17102a;color:#ffe9a8;font-size:11px;padding:8px"></textarea><div class="kvBtns"><button class="btn gray" onclick="closeModal()">取消</button><button class="btn green" onclick="doImport()">确认导入</button></div>');}
-function doImport(){const o=decodeSave(document.getElementById('impBox').value);if(!o){toast('存档码无效，请检查是否完整');SFX.err();return;}localStorage.setItem(SAVE_KEY,JSON.stringify(o));toast('导入成功，正在重新载入……');setTimeout(()=>location.reload(),600);}
+function doImport(){const o=decodeSave(document.getElementById('impBox').value);if(!o){toast('存档码无效，请检查是否完整');SFX.err();return;}__noSave=true;try{localStorage.setItem(SAVE_KEY,JSON.stringify(o));}catch(e){__noSave=false;toast('导入失败：浏览器存储不可用');SFX.err();return;}try{sessionStorage.setItem('mt_imported','1');}catch(e){}location.reload();}
 const GUIDE=[
  {t:'👋 欢迎来到晨星大陆',d:'集结你的英雄小队，一路打通副本、登顶竞技场。这一页是你的大本营：顶部能看下一关，中间有每日待办。',b:'下一步'},
  {t:'⚔️ 编队与战斗',d:'在「英雄」页点阵容槽位换人（点已上阵的再点另一个可交换），战斗中点底部发光的英雄卡释放大招，点敌方英雄能看它的属性。',b:'下一步'},
@@ -1783,6 +1784,7 @@ function bt3dDispose(){
 /* ================= 启动 ================= */
 loadGame();tickStamina();
 renderTop();goScr('home');
+try{if(sessionStorage.getItem('mt_imported')){sessionStorage.removeItem('mt_imported');setTimeout(()=>toast('✅ 存档导入成功'),900);}}catch(e){}
 if(!S.guide.battled){setTimeout(()=>toast('点任意关卡开始你的第一次战斗！'),700);}
 setInterval(()=>{if(B&&!B.over)return;},1000);
 </script>
